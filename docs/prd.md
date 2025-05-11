@@ -671,7 +671,7 @@ flowchart TB
 | ------------- | --------------------------- | ------------------------------------------ |
 | 프레임워크      | NestJS                     | 모듈식 아키텍처, TypeScript 지원, 확장성        |
 | API 레이어     | GraphQL (Apollo) + REST    | 유연한 데이터 요청, 오버페칭 방지                |
-| ORM           | TypeORM                    | NestJS 통합, 타입 안전성, 관계 매핑 지원        |
+| ORM           | MikroORM | NestJS 통합, 타입 안전성, 관계 매핑 지원        |
 | 인증/인가       | JWT + Passport            | 상태 비저장 인증, 유연한 전략                   |
 | 백그라운드 작업  | Bull + Redis              | 작업 큐, 스케줄링, 분산 처리                    |
 | 로깅/모니터링   | Winston + Pino             | 구조화된 로깅, 최소 오버헤드                    |
@@ -780,70 +780,44 @@ src/
 │   ├── exceptions/                  # 사용자 정의 예외
 │   ├── filters/                     # 글로벌 예외 필터
 │   ├── guards/                      # 인증/인가 가드
-│   ├── interceptors/              # 로깅, 캐싱 인터셉터
-│   ├── interfaces/                # 공통 인터페이스
-│   └── utils/                     # 헬퍼 함수
-├── config/                        # 환경 설정
+│   ├── interceptors/                # 로깅, 캐싱 인터셉터
+│   ├── interfaces/                  # 공통 인터페이스
+│   └── utils/                       # 헬퍼 함수
+├── config/                          # 환경 설정
 │   ├── app.config.ts
 │   ├── database.config.ts
 │   └── cache.config.ts
-├── auth/                          # 인증 컨텍스트
-│   ├── application/
-│   │   ├── commands/              # 명령 핸들러
-│   │   ├── queries/               # 쿼리 핸들러
-│   │   └── dtos/                  # 인증 관련 DTO
-│   ├── domain/
-│   │   ├── entities/              # 사용자, 토큰 엔티티
-│   │   ├── value-objects/         # 값 객체
-│   │   └── services/              # 도메인 서비스
-│   ├── infrastructure/
-│   │   ├── repositories/          # 리포지토리 구현
-│   │   └── services/              # 외부 서비스 통합
-│   ├── interfaces/
-│   │   ├── controllers/           # REST 컨트롤러
-│   │   ├── resolvers/             # GraphQL 리졸버
-│   │   └── mappers/               # DTO 매퍼
-│   └── auth.module.ts             # 모듈 정의
-├── books/                         # 서재 컨텍스트
-│   ├── application/
-│   │   ├── commands/              # 명령 핸들러
-│   │   ├── queries/               # 쿼리 핸들러
-│   │   └── dtos/                  # 책 관련 DTO
-│   ├── domain/
-│   │   ├── entities/              # 책, 컬렉션 엔티티
-│   │   ├── value-objects/         # ISBN, 출판 정보 값 객체
-│   │   ├── events/                # 도메인 이벤트
-│   │   └── services/              # 도메인 서비스
-│   ├── infrastructure/
-│   │   ├── repositories/          # 리포지토리 구현
-│   │   └── services/              # 외부 서비스 통합 (e.g. 도서 API)
-│   ├── interfaces/
-│   │   ├── controllers/           # REST 컨트롤러
-│   │   ├── resolvers/             # GraphQL 리졸버
-│   │   └── mappers/               # DTO 매퍼
-│   └── books.module.ts            # 모듈 정의
-├── notes/                         # 독서 노트 컨텍스트
-│   ├── application/
-│   │   ├── commands/              # 명령 핸들러
-│   │   ├── queries/               # 쿼리 핸들러
-│   │   └── dtos/                  # 노트 관련 DTO
-│   ├── domain/
-│   │   ├── entities/              # 페이지 노트, 구절, 생각 엔티티
-│   │   ├── value-objects/         # 노트 관련 값 객체
-│   │   ├── events/                # 노트 생성/수정 이벤트
-│   │   └── services/              # 노트 관련 도메인 서비스
-│   ├── infrastructure/
-│   │   └── repositories/          # 리포지토리 구현
-│   ├── interfaces/
-│   │   ├── controllers/           # REST 컨트롤러
-│   │   ├── resolvers/             # GraphQL 리졸버
-│   │   └── mappers/               # DTO 매퍼
-│   └── notes.module.ts            # 모듈 정의
-├── reading-status/                # 독서 상태 컨텍스트
+├── auth/                            # 인증 모듈
+│   ├── controllers/                 # REST 컨트롤러 
+│   ├── resolvers/                   # GraphQL 리졸버
+│   ├── services/                    # 비즈니스 로직 서비스
+│   ├── repositories/                # 데이터 접근 리포지토리
+│   ├── entities/                    # 데이터 모델 엔티티
+│   ├── dtos/                        # 데이터 전송 객체
+│   ├── guards/                      # 접근 제어 가드
+│   ├── strategies/                  # 인증 전략
+│   └── auth.module.ts               # 모듈 정의
+├── books/                           # 서재 모듈
+│   ├── controllers/                 # REST 컨트롤러
+│   ├── resolvers/                   # GraphQL 리졸버
+│   ├── services/                    # 비즈니스 로직 서비스
+│   ├── repositories/                # 데이터 접근 리포지토리
+│   ├── entities/                    # 데이터 모델 엔티티
+│   ├── dtos/                        # 데이터 전송 객체
+│   └── books.module.ts              # 모듈 정의
+├── notes/                           # 독서 노트 모듈
+│   ├── controllers/                 # REST 컨트롤러
+│   ├── resolvers/                   # GraphQL 리졸버
+│   ├── services/                    # 비즈니스 로직 서비스
+│   ├── repositories/                # 데이터 접근 리포지토리
+│   ├── entities/                    # 데이터 모델 엔티티
+│   ├── dtos/                        # 데이터 전송 객체
+│   └── notes.module.ts              # 모듈 정의
+├── reading-status/                  # 독서 상태 모듈
 │   ├── [동일한 구조]
-├── statistics/                    # 통계 컨텍스트
+├── statistics/                      # 통계 모듈
 │   ├── [동일한 구조]
-└── user-settings/                 # 사용자 설정 컨텍스트
+└── user-settings/                   # 사용자 설정 모듈
     └── [동일한 구조]
 ```
 
