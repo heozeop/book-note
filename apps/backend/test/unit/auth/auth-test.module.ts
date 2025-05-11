@@ -10,7 +10,7 @@ import { UserRepository } from '../../../src/auth/repositories/user.repository';
 import { AuthService } from '../../../src/auth/services/auth.service';
 import { PasswordService } from '../../../src/auth/services/password.service';
 import { TokenService } from '../../../src/auth/services/token.service';
-import { MockJwtStrategy } from './mocks/jwt-strategy.mock';
+import { JwtStrategy } from '../../../src/auth/strategies/jwt.strategy';
 import testOrmConfig from '../../../test/mikro-orm.test.config';
 
 /**
@@ -61,7 +61,7 @@ import testOrmConfig from '../../../test/mikro-orm.test.config';
     AuthService,
     PasswordService,
     TokenService,
-    MockJwtStrategy,
+    JwtStrategy,
     UserRepository,
     RefreshTokenRepository,
   ],
@@ -69,6 +69,7 @@ import testOrmConfig from '../../../test/mikro-orm.test.config';
     AuthService,
     PasswordService,
     TokenService,
+    JwtStrategy,
     JwtModule,
     PassportModule,
     MikroOrmModule,
