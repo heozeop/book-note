@@ -1,10 +1,15 @@
-import { Field, InputType, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { User, UserRole } from '../entities/user.entity';
+import {
+  Field,
+  InputType,
+  ObjectType,
+  registerEnumType,
+} from "@nestjs/graphql";
+import { User, UserRole } from "../entities/user.entity";
 
 // Register UserRole enum with GraphQL
 registerEnumType(UserRole, {
-  name: 'UserRole',
-  description: 'The role of the user',
+  name: "UserRole",
+  description: "The role of the user",
 });
 
 @ObjectType()
@@ -118,4 +123,4 @@ export class AuthPayload {
 
   @Field(() => AuthTokens)
   tokens: AuthTokens;
-} 
+}

@@ -1,20 +1,28 @@
-import { Collection, Entity, Enum, ManyToOne, OneToMany, PrimaryKey, Property } from '@mikro-orm/core';
-import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { v4 } from 'uuid';
-import { User } from '../../auth/entities/user.entity';
-import { Note } from '../../notes/entities/note.entity';
+import {
+  Collection,
+  Entity,
+  Enum,
+  ManyToOne,
+  OneToMany,
+  PrimaryKey,
+  Property,
+} from "@mikro-orm/core";
+import { Field, ID, ObjectType, registerEnumType } from "@nestjs/graphql";
+import { v4 } from "uuid";
+import { User } from "../../auth/entities/user.entity";
+import { Note } from "../../notes/entities/note.entity";
 
 export enum BookStatus {
-  WANT_TO_READ = 'want_to_read',
-  READING = 'reading',
-  COMPLETED = 'completed',
-  DNF = 'dnf', // Did Not Finish
+  WANT_TO_READ = "want_to_read",
+  READING = "reading",
+  COMPLETED = "completed",
+  DNF = "dnf", // Did Not Finish
 }
 
 // Register enum for GraphQL schema
 registerEnumType(BookStatus, {
-  name: 'BookStatus',
-  description: 'Status of a book in the reading journey',
+  name: "BookStatus",
+  description: "Status of a book in the reading journey",
 });
 
 @Entity()
@@ -40,7 +48,7 @@ export class Book {
   @Field({ nullable: true })
   coverImage?: string;
 
-  @Property({ nullable: true, type: 'text' })
+  @Property({ nullable: true, type: "text" })
   @Field({ nullable: true })
   description?: string;
 
@@ -72,7 +80,7 @@ export class Book {
   @Field({ nullable: true })
   finishedAt?: Date;
 
-  @Property({ type: 'json', nullable: true })
+  @Property({ type: "json", nullable: true })
   @Field(() => String, { nullable: true })
   metadata?: Record<string, any>;
 
@@ -80,7 +88,7 @@ export class Book {
   @Field(() => User)
   owner: User;
 
-  @OneToMany(() => Note, note => note.book, { eager: false })
+  @OneToMany(() => Note, (note) => note.book, { eager: false })
   @Field(() => [Note], { nullable: true })
   notes = new Collection<Note>(this);
 
@@ -91,4 +99,4 @@ export class Book {
   @Property({ onUpdate: () => new Date() })
   @Field()
   updatedAt: Date = new Date();
-} 
+}

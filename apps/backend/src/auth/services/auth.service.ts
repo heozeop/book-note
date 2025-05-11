@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from '../dtos/login.dto';
-import { RegisterUserDto } from '../dtos/register-user.dto';
-import { User } from '../entities/user.entity';
-import { UserRepository } from '../repositories/user.repository';
-import { PasswordService } from './password.service';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
+import { LoginDto } from "../dtos/login.dto";
+import { RegisterUserDto } from "../dtos/register-user.dto";
+import { User } from "../entities/user.entity";
+import { UserRepository } from "../repositories/user.repository";
+import { PasswordService } from "./password.service";
 
 @Injectable()
 export class AuthService {
@@ -23,7 +27,7 @@ export class AuthService {
    */
   async register(registerDto: RegisterUserDto): Promise<User> {
     const { password, displayName, profileImage, timezone } = registerDto;
-    
+
     // 이메일 정규화 및 검증
     const email = this.normalizeEmail(registerDto.email);
     this.validateEmail(email);
@@ -31,13 +35,14 @@ export class AuthService {
     // 이메일 중복 확인
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      throw new UnauthorizedException('이미 등록된 이메일입니다.');
+      throw new UnauthorizedException("이미 등록된 이메일입니다.");
     }
 
     // 비밀번호 강도 검증
-    const passwordStrength = this.passwordService.evaluatePasswordStrength(password);
+    const passwordStrength =
+      this.passwordService.evaluatePasswordStrength(password);
     if (passwordStrength < 60) {
-      throw new BadRequestException('비밀번호가 충분히 강력하지 않습니다.');
+      throw new BadRequestException("비밀번호가 충분히 강력하지 않습니다.");
     }
 
     // 비밀번호 해싱
@@ -67,16 +72,20 @@ export class AuthService {
    * @param loginDto 로그인 정보
    * @returns JWT 액세스 토큰
    */
-  async login(loginDto: LoginDto): Promise<{ accessToken: string; user: Partial<User> }> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ accessToken: string; user: Partial<User> }> {
     const { password, email } = loginDto;
-    
+
     // 이메일 정규화
     const normalizedEmail = this.normalizeEmail(email);
 
     // 사용자 확인
     const user = await this.userRepository.findByEmail(normalizedEmail);
     if (!user) {
-      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+      throw new UnauthorizedException(
+        "이메일 또는 비밀번호가 올바르지 않습니다.",
+      );
     }
 
     // 비밀번호 검증 (리프레시 토큰 갱신 시에는 건너뜀)
@@ -87,19 +96,21 @@ export class AuthService {
       );
 
       if (!isPasswordValid) {
-        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+        throw new UnauthorizedException(
+          "이메일 또는 비밀번호가 올바르지 않습니다.",
+        );
       }
     }
 
     // JWT 토큰 생성
     const now = Math.floor(Date.now() / 1000);
-    const payload = { 
-      sub: user.id, 
+    const payload = {
+      sub: user.id,
       email: user.email,
       role: user.role,
       iat: now,
     };
-    
+
     const accessToken = this.jwtService.sign(payload);
 
     // 사용자 정보 반환 (비밀번호 제외)
@@ -164,14 +175,18 @@ export class AuthService {
     // 기본 이메일 형식 검증 (class-validator가 이미 수행하지만, 추가 검증을 원할 경우)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
-      throw new BadRequestException('유효하지 않은 이메일 형식입니다.');
+      throw new BadRequestException("유효하지 않은 이메일 형식입니다.");
     }
 
     // 일회용 이메일 도메인 차단 (예시, 실제 구현 시 더 많은 도메인 추가 필요)
-    const disposableDomains = ['tempmail.com', 'guerrillamail.com', 'mailinator.com'];
-    const domain = email.split('@')[1];
+    const disposableDomains = [
+      "tempmail.com",
+      "guerrillamail.com",
+      "mailinator.com",
+    ];
+    const domain = email.split("@")[1];
     if (disposableDomains.includes(domain)) {
-      throw new BadRequestException('일회용 이메일은 사용할 수 없습니다.');
+      throw new BadRequestException("일회용 이메일은 사용할 수 없습니다.");
     }
   }
-} 
+}

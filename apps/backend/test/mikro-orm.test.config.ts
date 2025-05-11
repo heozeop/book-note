@@ -1,12 +1,12 @@
-import { Options } from '@mikro-orm/core';
-import { SqliteDriver } from '@mikro-orm/sqlite';
-import { RefreshToken } from '../src/auth/entities/refresh-token.entity';
-import { User } from '../src/auth/entities/user.entity';
+import { Options } from "@mikro-orm/core";
+import { SqliteDriver } from "@mikro-orm/sqlite";
+import { RefreshToken } from "../src/auth/entities/refresh-token.entity";
+import { User } from "../src/auth/entities/user.entity";
 
 // Test-specific Mikro-ORM configuration
 const testConfig: Options = {
   driver: SqliteDriver,
-  dbName: ':memory:',
+  dbName: ":memory:",
   entities: [User, RefreshToken],
   allowGlobalContext: true,
   discovery: {
@@ -22,6 +22,6 @@ const testConfig: Options = {
     disableForeignKeys: true,
     createForeignKeyConstraints: false,
   },
-}; 
+};
 
 export default testConfig;

@@ -1,9 +1,9 @@
-import { Entity, Enum, PrimaryKey, Property, Unique } from '@mikro-orm/core';
-import { v4 } from 'uuid';
+import { Entity, Enum, PrimaryKey, Property, Unique } from "@mikro-orm/core";
+import { v4 } from "uuid";
 
 export enum UserRole {
-  USER = 'user',
-  ADMIN = 'admin',
+  USER = "user",
+  ADMIN = "admin",
 }
 
 @Entity()
@@ -24,7 +24,7 @@ export class User {
   @Property({ nullable: true })
   profileImage?: string;
 
-  @Property({ type: 'json', nullable: true })
+  @Property({ type: "json", nullable: true })
   preferences?: Record<string, any>;
 
   @Property({ nullable: true })
@@ -41,4 +41,4 @@ export class User {
 
   @Property({ onUpdate: () => new Date() })
   updatedAt: Date = new Date();
-} 
+}

@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
 
 /**
  * Auth E2E Testing Utilities
@@ -19,9 +19,9 @@ export class AuthTestUtil {
     } = {},
   ): Promise<{ email: string; password: string; id: string }> {
     const email = options.email || `test-${Date.now()}@example.com`;
-    const password = options.password || 'StrongP@ssword123!';
-    const displayName = options.displayName || 'Test User';
-    const timezone = options.timezone || 'Asia/Seoul';
+    const password = options.password || "StrongP@ssword123!";
+    const displayName = options.displayName || "Test User";
+    const timezone = options.timezone || "Asia/Seoul";
 
     const registerDto = {
       email,
@@ -31,11 +31,13 @@ export class AuthTestUtil {
     };
 
     const response = await request(app.getHttpServer())
-      .post('/auth/register')
+      .post("/auth/register")
       .send(registerDto);
 
     if (response.status !== 201) {
-      throw new Error(`Failed to create test user: ${JSON.stringify(response.body)}`);
+      throw new Error(
+        `Failed to create test user: ${JSON.stringify(response.body)}`,
+      );
     }
 
     return {
@@ -49,7 +51,7 @@ export class AuthTestUtil {
    * Helper function to safely access cookies
    */
   static getCookies(response: request.Response): string[] {
-    const cookies = response.headers['set-cookie'];
+    const cookies = response.headers["set-cookie"];
     return Array.isArray(cookies) ? cookies : [];
   }
 
@@ -57,9 +59,11 @@ export class AuthTestUtil {
    * Extract access token from cookies if needed for headers
    */
   static extractAccessTokenFromCookies(cookies: string[]): string | null {
-    const accessTokenCookie = cookies.find(cookie => cookie.startsWith('accessToken='));
+    const accessTokenCookie = cookies.find((cookie) =>
+      cookie.startsWith("accessToken="),
+    );
     if (!accessTokenCookie) return null;
-    
+
     const match = accessTokenCookie.match(/accessToken=([^;]+)/);
     return match ? match[1] : null;
   }
@@ -69,22 +73,26 @@ export class AuthTestUtil {
    */
   static debugCookies(cookies: string[]): void {
     if (cookies.length === 0) {
-      console.warn('No cookies found');
+      console.warn("No cookies found");
       return;
     }
 
-    const accessTokenCookie = cookies.find(cookie => cookie.includes('accessToken='));
-    const refreshTokenCookie = cookies.find(cookie => cookie.includes('refreshToken='));
+    const accessTokenCookie = cookies.find((cookie) =>
+      cookie.includes("accessToken="),
+    );
+    const refreshTokenCookie = cookies.find((cookie) =>
+      cookie.includes("refreshToken="),
+    );
 
-    console.log('Access Token Cookie present:', !!accessTokenCookie);
-    console.log('Refresh Token Cookie present:', !!refreshTokenCookie);
-    
+    console.log("Access Token Cookie present:", !!accessTokenCookie);
+    console.log("Refresh Token Cookie present:", !!refreshTokenCookie);
+
     if (accessTokenCookie) {
-      console.log('Access Token Cookie:', accessTokenCookie);
+      console.log("Access Token Cookie:", accessTokenCookie);
     }
-    
+
     if (refreshTokenCookie) {
-      console.log('Refresh Token Cookie:', refreshTokenCookie);
+      console.log("Refresh Token Cookie:", refreshTokenCookie);
     }
   }
 
@@ -94,33 +102,40 @@ export class AuthTestUtil {
   static async login(
     app: INestApplication,
     credentials: { email: string; password: string },
-  ): Promise<{ cookies: string[]; userId: string | null; accessToken: string | null }> {
+  ): Promise<{
+    cookies: string[];
+    userId: string | null;
+    accessToken: string | null;
+  }> {
     try {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post("/auth/login")
         .send(credentials);
 
       // Login should return 200 or 201
       if (response.status === 200 || response.status === 201) {
-        console.log('Login successful with status', response.status);
-        
+        console.log("Login successful with status", response.status);
+
         // Get cookies from response
         const cookies = this.getCookies(response);
-        
+
         // Extract access token from cookies if needed for Authorization header
         const accessToken = this.extractAccessTokenFromCookies(cookies);
-        
+
         return {
           cookies,
           userId: response.body.user?.id || null,
           accessToken,
         };
       }
-      
-      console.warn(`Login failed with status ${response.status}:`, response.body);
+
+      console.warn(
+        `Login failed with status ${response.status}:`,
+        response.body,
+      );
       return { cookies: [], userId: null, accessToken: null };
     } catch (error) {
-      console.error('Exception during login:', error);
+      console.error("Exception during login:", error);
       return { cookies: [], userId: null, accessToken: null };
     }
   }
@@ -134,17 +149,17 @@ export class AuthTestUtil {
   ): Promise<{ cookies: string[]; success: boolean }> {
     try {
       const response = await request(app.getHttpServer())
-        .post('/auth/refresh-token')
-        .set('Cookie', cookies);
+        .post("/auth/refresh-token")
+        .set("Cookie", cookies);
 
       if (response.status === 200) {
         const newCookies = this.getCookies(response);
         return { cookies: newCookies, success: true };
       }
-      
+
       return { cookies: [], success: false };
     } catch (error) {
-      console.error('Exception during token refresh:', error);
+      console.error("Exception during token refresh:", error);
       return { cookies: [], success: false };
     }
   }
@@ -153,17 +168,17 @@ export class AuthTestUtil {
    * Log out a user by revoking all refresh tokens and clearing cookies
    */
   static async logout(
-    app: INestApplication, 
-    cookies: string[]
+    app: INestApplication,
+    cookies: string[],
   ): Promise<boolean> {
     try {
       const response = await request(app.getHttpServer())
-        .post('/auth/logout')
-        .set('Cookie', cookies);
+        .post("/auth/logout")
+        .set("Cookie", cookies);
 
       return response.status === 200;
     } catch (error) {
-      console.error('Exception during logout:', error);
+      console.error("Exception during logout:", error);
       return false;
     }
   }
@@ -177,8 +192,8 @@ export class AuthTestUtil {
   ): Promise<Record<string, any> | null> {
     try {
       const response = await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Cookie', cookies);
+        .get("/auth/me")
+        .set("Cookie", cookies);
 
       if (response.status !== 200) {
         return null;
@@ -186,7 +201,7 @@ export class AuthTestUtil {
 
       return response.body;
     } catch (error) {
-      console.error('Exception getting current user:', error);
+      console.error("Exception getting current user:", error);
       return null;
     }
   }
@@ -199,8 +214,9 @@ export class AuthTestUtil {
     password: string,
   ): Promise<{ strength: number; feedback: string } | null> {
     try {
-      const response = await request(app.getHttpServer())
-        .get(`/auth/password-strength/${password}`);
+      const response = await request(app.getHttpServer()).get(
+        `/auth/password-strength/${password}`,
+      );
 
       if (response.status !== 200) {
         return null;
@@ -211,7 +227,7 @@ export class AuthTestUtil {
         feedback: response.body.feedback,
       };
     } catch (error) {
-      console.error('Exception checking password strength:', error);
+      console.error("Exception checking password strength:", error);
       return null;
     }
   }
@@ -229,25 +245,25 @@ export class AuthTestUtil {
     return [
       {
         email: `soojin-${Date.now()}@example.com`,
-        password: 'StrongP@ssword123!',
-        displayName: 'Soo-jin',
-        persona: 'professional',
-        description: '30세, 직장인 독서가, 출판/미디어 회사 마케터',
+        password: "StrongP@ssword123!",
+        displayName: "Soo-jin",
+        persona: "professional",
+        description: "30세, 직장인 독서가, 출판/미디어 회사 마케터",
       },
       {
         email: `jaewoo-${Date.now()}@example.com`,
-        password: 'SecureP@ssword456!',
-        displayName: 'Jae-woo',
-        persona: 'student',
-        description: '25세, 대학원생 & 독서모임 운영',
+        password: "SecureP@ssword456!",
+        displayName: "Jae-woo",
+        persona: "student",
+        description: "25세, 대학원생 & 독서모임 운영",
       },
       {
         email: `minjun-${Date.now()}@example.com`,
-        password: 'ComplexP@ssword789!',
-        displayName: 'Min-jun',
-        persona: 'casual',
-        description: '45세, IT 매니저 & 취미 독서가',
+        password: "ComplexP@ssword789!",
+        displayName: "Min-jun",
+        persona: "casual",
+        description: "45세, IT 매니저 & 취미 독서가",
       },
     ];
   }
-} 
+}

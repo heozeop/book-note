@@ -1,14 +1,14 @@
-import { Entity, Enum, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
-import { v4 } from 'uuid';
-import { User } from '../../auth/entities/user.entity';
-import { Book } from '../../books/entities/book.entity';
+import { Entity, Enum, ManyToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { v4 } from "uuid";
+import { User } from "../../auth/entities/user.entity";
+import { Book } from "../../books/entities/book.entity";
 
 export enum ReadingState {
-  PLANNING = 'planning',
-  READING = 'reading',
-  COMPLETED = 'completed',
-  PAUSED = 'paused',
-  ABANDONED = 'abandoned',
+  PLANNING = "planning",
+  READING = "reading",
+  COMPLETED = "completed",
+  PAUSED = "paused",
+  ABANDONED = "abandoned",
 }
 
 @Entity()
@@ -37,7 +37,7 @@ export class ReadingStatus {
   @Property({ nullable: true })
   rating?: number;
 
-  @Property({ nullable: true, type: 'text' })
+  @Property({ nullable: true, type: "text" })
   review?: string;
 
   @Property()
@@ -45,4 +45,4 @@ export class ReadingStatus {
 
   @Property({ onUpdate: () => new Date() })
   updatedAt: Date = new Date();
-} 
+}

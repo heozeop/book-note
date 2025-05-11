@@ -1,8 +1,8 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { v4 } from 'uuid';
-import { User } from '../../auth/entities/user.entity';
-import { Book } from '../../books/entities/book.entity';
+import { Entity, ManyToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { v4 } from "uuid";
+import { User } from "../../auth/entities/user.entity";
+import { Book } from "../../books/entities/book.entity";
 
 @Entity()
 @ObjectType()
@@ -11,7 +11,7 @@ export class Note {
   @Field(() => ID)
   id: string = v4();
 
-  @Property({ type: 'text' })
+  @Property({ type: "text" })
   @Field()
   content: string;
 
@@ -27,11 +27,11 @@ export class Note {
   @Field({ nullable: true })
   highlight?: string;
 
-  @Property({ nullable: true, type: 'text' })
+  @Property({ nullable: true, type: "text" })
   @Field({ nullable: true })
   personalThoughts?: string;
 
-  @Property({ type: 'json', nullable: true })
+  @Property({ type: "json", nullable: true })
   @Field(() => String, { nullable: true })
   tags?: string[];
 
@@ -50,4 +50,4 @@ export class Note {
   @Property({ onUpdate: () => new Date() })
   @Field()
   updatedAt: Date = new Date();
-} 
+}

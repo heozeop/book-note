@@ -1,5 +1,5 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { GqlExecutionContext } from '@nestjs/graphql';
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import { GqlExecutionContext } from "@nestjs/graphql";
 
 /**
  * GraphQL 컨텍스트에서 인증된 사용자를 추출하는 데코레이터
@@ -19,4 +19,4 @@ export const CurrentUser = createParamDecorator(
 
     return data ? user?.[data] : user;
   },
-); 
+);

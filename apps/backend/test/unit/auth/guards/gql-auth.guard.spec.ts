@@ -1,16 +1,16 @@
-import { ExecutionContext } from '@nestjs/common';
-import { GqlExecutionContext } from '@nestjs/graphql';
-import { Test, TestingModule } from '@nestjs/testing';
-import { GqlAuthGuard } from '../../../../src/auth/guards/gql-auth.guard';
-import { AuthTestModule } from '../auth-test.module';
+import { ExecutionContext } from "@nestjs/common";
+import { GqlExecutionContext } from "@nestjs/graphql";
+import { Test, TestingModule } from "@nestjs/testing";
+import { GqlAuthGuard } from "../../../../src/auth/guards/gql-auth.guard";
+import { AuthTestModule } from "../auth-test.module";
 
-jest.mock('@nestjs/graphql', () => ({
+jest.mock("@nestjs/graphql", () => ({
   GqlExecutionContext: {
     create: jest.fn(),
   },
 }));
 
-describe('GqlAuthGuard', () => {
+describe("GqlAuthGuard", () => {
   let guard: GqlAuthGuard;
   let mockExecutionContext: ExecutionContext;
   let mockGqlContext: {
@@ -46,34 +46,36 @@ describe('GqlAuthGuard', () => {
     (GqlExecutionContext.create as jest.Mock).mockReturnValue(mockGqlContext);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(guard).toBeDefined();
   });
 
-  describe('getRequest', () => {
-    it('should extract request from GraphQL context', () => {
+  describe("getRequest", () => {
+    it("should extract request from GraphQL context", () => {
       // Arrange
-      const mockRequest = { headers: { authorization: 'Bearer test-token' } };
+      const mockRequest = { headers: { authorization: "Bearer test-token" } };
       mockGqlContext.getContext.mockReturnValue({ req: mockRequest });
-      
+
       // Act
       const result = guard.getRequest(mockExecutionContext);
-      
+
       // Assert
-      expect(GqlExecutionContext.create).toHaveBeenCalledWith(mockExecutionContext);
+      expect(GqlExecutionContext.create).toHaveBeenCalledWith(
+        mockExecutionContext,
+      );
       expect(mockGqlContext.getContext).toHaveBeenCalled();
       expect(result).toBe(mockRequest);
     });
 
-    it('should handle context without req property', () => {
+    it("should handle context without req property", () => {
       // Arrange
       mockGqlContext.getContext.mockReturnValue({});
-      
+
       // Act
       const result = guard.getRequest(mockExecutionContext);
-      
+
       // Assert
       expect(result).toBeUndefined();
     });
   });
-}); 
+});

@@ -11,13 +11,14 @@ export const RefreshToken = createParamDecorator(
     // HTTP와 GraphQL 컨텍스트 모두 지원
     const ctx = GqlExecutionContext.create(context);
     // GraphQL이면 ctx.getContext().req 반환, HTTP면 context.switchToHttp().getRequest() 반환
-    const request = ctx.getContext()?.req || context.switchToHttp().getRequest();
+    const request =
+      ctx.getContext()?.req || context.switchToHttp().getRequest();
 
     // Try to get token from cookies first
     if (request.cookies?.refreshToken) {
       return request.cookies.refreshToken;
     }
-    
+
     // Try from request body
     if (request.body?.refreshToken) {
       return request.body.refreshToken;
@@ -25,14 +26,16 @@ export const RefreshToken = createParamDecorator(
 
     // Try from cookie header
     if (request.headers?.cookie) {
-      const cookies = request.headers.cookie.split(';');
-      const refreshTokenCookie = cookies.find((cookie: string) => cookie.trim().startsWith('refreshToken='));
+      const cookies = request.headers.cookie.split(";");
+      const refreshTokenCookie = cookies.find((cookie: string) =>
+        cookie.trim().startsWith("refreshToken="),
+      );
       if (refreshTokenCookie) {
-        return refreshTokenCookie.trim().substring('refreshToken='.length);
+        return refreshTokenCookie.trim().substring("refreshToken=".length);
       }
     }
-    
+
     // Return undefined if no token found
     return undefined;
   },
-); 
+);

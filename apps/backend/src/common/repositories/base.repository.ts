@@ -1,7 +1,12 @@
-import { AnyEntity, EntityManager, EntityRepository } from '@mikro-orm/core';
+import { AnyEntity, EntityManager, EntityRepository } from "@mikro-orm/core";
 
-export abstract class BaseRepository<T extends AnyEntity<T>> extends EntityRepository<T> {
-  constructor(protected readonly em: EntityManager, entityName: string) {
+export abstract class BaseRepository<
+  T extends AnyEntity<T>,
+> extends EntityRepository<T> {
+  constructor(
+    protected readonly em: EntityManager,
+    entityName: string,
+  ) {
     super(em, entityName);
   }
 
@@ -13,11 +18,11 @@ export abstract class BaseRepository<T extends AnyEntity<T>> extends EntityRepos
     this.em.persist(entity);
     await this.em.flush();
   }
-  
+
   /**
    * 변경사항을 저장합니다.
    */
   async flush(): Promise<void> {
     await this.em.flush();
   }
-} 
+}

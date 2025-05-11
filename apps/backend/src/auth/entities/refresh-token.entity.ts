@@ -1,11 +1,18 @@
-import { Entity, Enum, ManyToOne, PrimaryKey, Property, Unique } from '@mikro-orm/core';
-import { v4 } from 'uuid';
-import { User } from './user.entity';
+import {
+  Entity,
+  Enum,
+  ManyToOne,
+  PrimaryKey,
+  Property,
+  Unique,
+} from "@mikro-orm/core";
+import { v4 } from "uuid";
+import { User } from "./user.entity";
 
 export enum TokenStatus {
-  ACTIVE = 'active',
-  REVOKED = 'revoked',
-  EXPIRED = 'expired',
+  ACTIVE = "active",
+  REVOKED = "revoked",
+  EXPIRED = "expired",
 }
 
 @Entity()
@@ -63,4 +70,4 @@ export class RefreshToken {
     this.revokedAt = new Date();
     this.status = TokenStatus.REVOKED;
   }
-} 
+}

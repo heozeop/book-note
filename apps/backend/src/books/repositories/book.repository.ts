@@ -1,12 +1,12 @@
-import { EntityManager } from '@mikro-orm/core';
-import { Injectable } from '@nestjs/common';
-import { BaseRepository } from '../../common/repositories/base.repository';
-import { Book, BookStatus } from '../entities/book.entity';
+import { EntityManager } from "@mikro-orm/core";
+import { Injectable } from "@nestjs/common";
+import { BaseRepository } from "../../common/repositories/base.repository";
+import { Book, BookStatus } from "../entities/book.entity";
 
 @Injectable()
 export class BookRepository extends BaseRepository<Book> {
   constructor(protected readonly em: EntityManager) {
-    super(em, 'Book');
+    super(em, "Book");
   }
 
   /**
@@ -87,4 +87,4 @@ export class BookRepository extends BaseRepository<Book> {
     const result = await this.nativeDelete({ owner: ownerId });
     return result;
   }
-} 
+}

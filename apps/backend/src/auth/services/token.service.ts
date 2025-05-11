@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { RefreshToken } from '../entities/refresh-token.entity';
-import { User } from '../entities/user.entity';
-import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
-import { PasswordService } from './password.service';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { RefreshToken } from "../entities/refresh-token.entity";
+import { User } from "../entities/user.entity";
+import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
+import { PasswordService } from "./password.service";
 
 @Injectable()
 export class TokenService {
@@ -26,7 +26,10 @@ export class TokenService {
     ipAddress?: string,
   ): Promise<{ token: string; refreshToken: RefreshToken }> {
     // 토큰 만료 시간 설정
-    const expiryDays = this.configService.get<number>('app.jwt.refreshTokenExpiryDays', 7);
+    const expiryDays = this.configService.get<number>(
+      "app.jwt.refreshTokenExpiryDays",
+      7,
+    );
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiryDays);
 
@@ -36,11 +39,11 @@ export class TokenService {
 
     // 리프레시 토큰 객체 생성
     const refreshToken = new RefreshToken(user, tokenHash, expiresAt);
-    
+
     if (userAgent) {
       refreshToken.userAgent = userAgent;
     }
-    
+
     if (ipAddress) {
       refreshToken.ipAddress = ipAddress;
     }
@@ -61,17 +64,18 @@ export class TokenService {
    */
   async verifyRefreshToken(token: string): Promise<RefreshToken | null> {
     const tokenHash = await this.hashToken(token);
-    const refreshToken = await this.refreshTokenRepository.findValidToken(tokenHash);
-    
+    const refreshToken =
+      await this.refreshTokenRepository.findValidToken(tokenHash);
+
     if (!refreshToken) {
       return null;
     }
-    
+
     // 토큰이 유효한지 검사
     if (!refreshToken.isValid()) {
       return null;
     }
-    
+
     return refreshToken;
   }
 
@@ -82,15 +86,16 @@ export class TokenService {
    */
   async revokeRefreshToken(token: string): Promise<boolean> {
     const tokenHash = await this.hashToken(token);
-    const refreshToken = await this.refreshTokenRepository.findByTokenHash(tokenHash);
-    
+    const refreshToken =
+      await this.refreshTokenRepository.findByTokenHash(tokenHash);
+
     if (!refreshToken) {
       return false;
     }
-    
+
     refreshToken.revoke();
     await this.refreshTokenRepository.flush();
-    
+
     return true;
   }
 
@@ -119,4 +124,4 @@ export class TokenService {
   private async hashToken(token: string): Promise<string> {
     return this.passwordService.hashPassword(token);
   }
-} 
+}
