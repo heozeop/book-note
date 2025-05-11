@@ -1,17 +1,17 @@
 import {
-  Collection,
-  Entity,
-  Enum,
-  ManyToOne,
-  OneToMany,
-  PrimaryKey,
-  Property,
+    Collection,
+    Entity,
+    Enum,
+    ManyToOne,
+    OneToMany,
+    PrimaryKey,
+    Property,
 } from "@mikro-orm/core";
 import { v4 } from "uuid";
 import { User } from "../../auth/entities/user.entity";
 import { BookTag } from "./book-tag.entity";
 import { Book } from "./book.entity";
-import { Note } from "./note.entity";
+import { PageNote } from "./page-note.entity";
 import { BookStatus, ReadingStatus } from "./reading-status.entity";
 
 @Entity()
@@ -52,8 +52,8 @@ export class UserBook {
   @Property({ nullable: true })
   finishedAt?: Date;
 
-  @OneToMany(() => Note, (note) => note.userBook)
-  notes = new Collection<Note>(this);
+  @OneToMany(() => PageNote, (pageNote) => pageNote.userBook)
+  pageNotes = new Collection<PageNote>(this);
 
   @OneToMany(() => ReadingStatus, (readingStatus) => readingStatus.userBook)
   readingStatuses = new Collection<ReadingStatus>(this);

@@ -1,6 +1,7 @@
 import { Collection, Entity, OneToMany, PrimaryKey, Property } from "@mikro-orm/core";
 import { v4 } from "uuid";
 import { BookTag } from "./book-tag.entity";
+import { PageNoteTag } from "./page-note-tag.entity";
 
 @Entity()
 export class Tag {
@@ -15,6 +16,9 @@ export class Tag {
 
   @OneToMany(() => BookTag, bookTag => bookTag.tag)
   bookTags = new Collection<BookTag>(this);
+
+  @OneToMany(() => PageNoteTag, pageNoteTag => pageNoteTag.tag)
+  pageNoteTags = new Collection<PageNoteTag>(this);
 
   @Property()
   createdAt: Date = new Date();
