@@ -1,8 +1,8 @@
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { UseGuards } from "@nestjs/common";
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { User } from "../../auth/entities/user.entity";
-import { GqlAuthGuard } from "../../auth/guards/gql-auth.guard";
 import { Book, BookStatus } from "../entities/book.entity";
 import { CreateBookInput } from "../graphql/inputs/create-book.input";
 import { UpdateBookInput } from "../graphql/inputs/update-book.input";
@@ -10,7 +10,7 @@ import { BookType } from "../graphql/types/book.type";
 import { BookService } from "../services/book.service";
 
 @Resolver(() => BookType)
-@UseGuards(GqlAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class BookResolver {
   constructor(private readonly bookService: BookService) {}
 
@@ -73,10 +73,31 @@ export class BookResolver {
   @Mutation(() => BookType)
   async updateBookStatus(
     @Args("id") id: string,
-    @Args("status") status: BookStatus,
+    @Args("status") status: string,
     @CurrentUser() user: User,
   ): Promise<BookType> {
-    const book = await this.bookService.updateBookStatus(id, status, user.id);
+    // Convert GraphQL enum string to BookStatus enum
+    let bookStatus: BookStatus;
+    
+    // Map from uppercase GraphQL enum to lowercase database enum
+    switch(status.toUpperCase()) {
+      case 'WANT_TO_READ':
+        bookStatus = BookStatus.WANT_TO_READ;
+        break;
+      case 'READING':
+        bookStatus = BookStatus.READING;
+        break;
+      case 'COMPLETED':
+        bookStatus = BookStatus.COMPLETED;
+        break;
+      case 'DNF':
+        bookStatus = BookStatus.DNF;
+        break;
+      default:
+        bookStatus = BookStatus.WANT_TO_READ;
+    }
+    
+    const book = await this.bookService.updateBookStatus(id, bookStatus, user.id);
     return this.mapBookToType(book);
   }
 
@@ -102,7 +123,7 @@ export class BookResolver {
       createdAt: book.createdAt,
       updatedAt: book.updatedAt,
       owner: { id: book.owner.id } as any, // Will be resolved by UserResolver if needed
-      notes: book.notes?.getItems().map((note) => ({ id: note.id })) as any, // Will be resolved by NoteResolver if needed
+      notes: book.notes?.isInitialized() ? book.notes.getItems().map((note) => ({ id: note.id })) as any : [] as any,
     };
   }
 }

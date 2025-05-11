@@ -23,7 +23,7 @@ export class Collection {
   @ManyToOne(() => User)
   owner: User;
 
-  @OneToMany(() => BookCollection, (bookCollection: BookCollection) => bookCollection.collection)
+  @OneToMany(() => BookCollection, (bookCollection: BookCollection) => bookCollection.collection, { eager: true })
   bookCollections = new OrmCollection<BookCollection>(this);
 
   @Property()

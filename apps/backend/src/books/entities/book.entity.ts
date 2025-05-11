@@ -65,7 +65,7 @@ export class Book {
   @ManyToOne(() => User)
   owner: User;
 
-  @OneToMany(() => Note, (note) => note.book, { eager: false })
+  @OneToMany(() => Note, (note) => note.book, { eager: true })
   notes = new Collection<Note>(this);
 
   @OneToMany(() => BookCollection, (bookCollection) => bookCollection.book)

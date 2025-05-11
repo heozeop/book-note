@@ -2,9 +2,65 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AuthTokens {
+  accessToken: String!
+  expiresIn: Float!
+  refreshToken: String
+  tokenType: String!
+}
+
+type Book {
+  author: String
+  coverImage: String
+  createdAt: DateTime!
+  currentPage: Float
+  description: String
+  finishedAt: DateTime
+  id: ID!
+  isbn: String
+  metadata: String
+  notes: [Note!]
+  owner: User!
+  publishedDate: DateTime
+  publisher: String
+  startedAt: DateTime
+  status: BookStatus!
+  title: String!
+  totalPages: Float
+  updatedAt: DateTime!
+}
+
+"""The status of a book"""
+enum BookStatus {
+  """Completed reading"""
+  COMPLETED
+
+  """Did not finish"""
+  DNF
+
+  """Currently reading"""
+  READING
+
+  """Want to read"""
+  WANT_TO_READ
+}
+
 input ChangePasswordInput {
   currentPassword: String!
   newPassword: String!
+}
+
+input CreateBookInput {
+  author: String
+  coverImage: String
+  description: String
+  isbn: String
+  metadata: String
+  publishedDate: DateTime
+  publisher: String
+  status: BookStatus
+  title: String!
+  totalPages: Int
 }
 
 """
@@ -14,14 +70,71 @@ scalar DateTime
 
 type Mutation {
   changePassword(input: ChangePasswordInput!): Boolean!
+  createBook(input: CreateBookInput!): Book!
   deleteAccount: Boolean!
+  deleteBook(id: String!): Boolean!
+  updateBook(id: String!, input: UpdateBookInput!): Book!
+  updateBookStatus(id: String!, status: String!): Book!
   updateProfile(input: UpdateProfileInput!): User!
 }
 
+type Note {
+  author: User!
+  book: Book!
+  chapter: String
+  content: String!
+  createdAt: DateTime!
+  highlight: String
+  id: ID!
+  page: Float
+  personalThoughts: String
+  tags: [String!]
+  thoughts: [Thought!]
+  updatedAt: DateTime!
+}
+
 type Query {
+  book(id: String!): Book!
+  books(status: String): [Book!]!
   me: User!
   user(id: String!): User!
   users: [User!]!
+}
+
+type Stroke {
+  createdAt: DateTime!
+  id: ID!
+  sourceType: String!
+  strokeData: String!
+  thought: Thought!
+  updatedAt: DateTime!
+}
+
+type Thought {
+  childThoughts: [Thought!]
+  createdAt: DateTime!
+  depth: Float!
+  id: ID!
+  inputType: String!
+  note: Note!
+  orderIndex: Float!
+  parentThought: Thought
+  strokes: [Stroke!]
+  text: String
+  updatedAt: DateTime!
+}
+
+input UpdateBookInput {
+  author: String
+  coverImage: String
+  description: String
+  isbn: String
+  metadata: String
+  publishedDate: DateTime
+  publisher: String
+  status: BookStatus
+  title: String
+  totalPages: Int
 }
 
 input UpdateProfileInput {

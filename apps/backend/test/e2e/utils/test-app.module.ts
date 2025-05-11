@@ -9,6 +9,10 @@ import { join } from "path";
 import { AuthModule } from "../../../src/auth/auth.module";
 import { RefreshToken } from "../../../src/auth/entities/refresh-token.entity";
 import { User } from "../../../src/auth/entities/user.entity";
+import { BooksModule } from "../../../src/books/books.module";
+import { BookCollection } from "../../../src/books/entities/book-collection.entity";
+import { Book } from "../../../src/books/entities/book.entity";
+import { Collection } from "../../../src/books/entities/collection.entity";
 import testOrmConfig from "../../mikro-orm.test.config";
 
 /**
@@ -66,11 +70,12 @@ export class TestAppModule {
 
       // Register entities
       MikroOrmModule.forFeature({
-        entities: [User, RefreshToken],
+        entities: [User, RefreshToken, Book, Collection, BookCollection, ],
       }),
 
       // Import Auth module
       AuthModule,
+      BooksModule,
     ];
 
     // Conditionally add GraphQL if enabled

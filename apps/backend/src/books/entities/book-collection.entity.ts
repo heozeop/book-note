@@ -8,7 +8,7 @@ export class BookCollection {
   @PrimaryKey()
   id: string = v4();
 
-  @ManyToOne(() => Book)
+  @ManyToOne(() => Book, { eager: true })
   book: Book;
 
   @ManyToOne(() => Collection)
