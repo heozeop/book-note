@@ -19,6 +19,7 @@ export class AuthTestUtil {
     } = {},
   ): Promise<{ email: string; password: string; id: string }> {
     const email = options.email || `test-${Date.now()}@example.com`;
+    // Make sure the password is complex enough for validation
     const password = options.password || "StrongP@ssword123!";
     const displayName = options.displayName || "Test User";
     const timezone = options.timezone || "Asia/Seoul";

@@ -11,8 +11,14 @@ import { RefreshToken } from "../../../src/auth/entities/refresh-token.entity";
 import { User } from "../../../src/auth/entities/user.entity";
 import { BooksModule } from "../../../src/books/books.module";
 import { BookCollection } from "../../../src/books/entities/book-collection.entity";
+import { BookTag } from "../../../src/books/entities/book-tag.entity";
 import { Book } from "../../../src/books/entities/book.entity";
 import { Collection } from "../../../src/books/entities/collection.entity";
+import { Note } from "../../../src/books/entities/note.entity";
+import { ReadingLog } from "../../../src/books/entities/reading-log.entity";
+import { ReadingStatus } from "../../../src/books/entities/reading-status.entity";
+import { Tag } from "../../../src/books/entities/tag.entity";
+import { UserBook } from "../../../src/books/entities/user-book.entity";
 import testOrmConfig from "../../mikro-orm.test.config";
 
 /**
@@ -70,7 +76,19 @@ export class TestAppModule {
 
       // Register entities
       MikroOrmModule.forFeature({
-        entities: [User, RefreshToken, Book, Collection, BookCollection, ],
+        entities: [
+          User, 
+          RefreshToken, 
+          Book, 
+          Collection, 
+          BookCollection, 
+          UserBook,
+          ReadingStatus,
+          ReadingLog,
+          BookTag,
+          Tag,
+          Note
+        ],
       }),
 
       // Import Auth module

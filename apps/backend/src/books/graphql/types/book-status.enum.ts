@@ -1,22 +1,22 @@
-import { BookStatus } from "@/books/entities/book.entity";
+import { BookStatus } from "@/books/entities/reading-status.entity";
 import { registerEnumType } from "@nestjs/graphql";
 
 // Register enum for GraphQL schema
 registerEnumType(BookStatus, {
   name: "BookStatus",
-  description: "The status of a book",
+  description: "Book reading status",
   valuesMap: {
     WANT_TO_READ: {
-      description: "Want to read",
+      description: "User wants to read this book",
     },
     READING: {
-      description: "Currently reading",
+      description: "User is currently reading this book",
     },
     COMPLETED: {
-      description: "Completed reading",
+      description: "User has completed reading this book",
     },
     DNF: {
-      description: "Did not finish",
+      description: "User did not finish this book",
     },
   },
 });

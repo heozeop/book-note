@@ -2,47 +2,46 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type AuthTokens {
-  accessToken: String!
-  expiresIn: Float!
-  refreshToken: String
-  tokenType: String!
-}
-
-type Book {
+type BookResponseType {
   author: String
-  coverImage: String
+  coverUrl: String
   createdAt: DateTime!
-  currentPage: Float
   description: String
-  finishedAt: DateTime
   id: ID!
   isbn: String
-  metadata: String
-  notes: [Note!]
-  owner: User!
+  pageCount: Float
   publishedDate: DateTime
   publisher: String
-  startedAt: DateTime
-  status: BookStatus!
+  tags: [TagType!]
   title: String!
-  totalPages: Float
   updatedAt: DateTime!
 }
 
-"""The status of a book"""
-enum BookStatus {
-  """Completed reading"""
-  COMPLETED
+type BookSearchResponseType {
+  display: Int!
+  items: [BookType!]!
+  page: Int
+  start: Int!
+  total: Int!
+}
 
-  """Did not finish"""
-  DNF
-
-  """Currently reading"""
-  READING
-
-  """Want to read"""
-  WANT_TO_READ
+type BookType {
+  author: String
+  coverUrl: String
+  createdAt: DateTime!
+  description: String
+  discount: Float
+  externalId: String
+  id: ID!
+  isbn: String
+  language: String
+  pageCount: Int
+  price: Float
+  publishedDate: DateTime
+  publisher: String
+  subTitle: String
+  title: String!
+  updatedAt: DateTime!
 }
 
 input ChangePasswordInput {
@@ -50,17 +49,35 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
+type CollectionResponseType {
+  books: [BookResponseType!]
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  name: String!
+  updatedAt: DateTime!
+}
+
 input CreateBookInput {
   author: String
-  coverImage: String
+  coverUrl: String
   description: String
+  discount: Int
+  externalId: String
   isbn: String
-  metadata: String
+  language: String
+  pageCount: Int
+  price: Int
   publishedDate: DateTime
   publisher: String
-  status: BookStatus
+  subTitle: String
   title: String!
-  totalPages: Int
+}
+
+input CreateCollectionInput {
+  coverUrl: String
+  description: String
+  name: String!
 }
 
 """
@@ -69,72 +86,61 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 scalar DateTime
 
 type Mutation {
+  addBookToCollection(bookId: String!, collectionId: String!): Boolean!
   changePassword(input: ChangePasswordInput!): Boolean!
-  createBook(input: CreateBookInput!): Book!
+  createBook(input: CreateBookInput!): UserBookResponseType
+  createCollection(input: CreateCollectionInput!): CollectionResponseType!
   deleteAccount: Boolean!
   deleteBook(id: String!): Boolean!
-  updateBook(id: String!, input: UpdateBookInput!): Book!
-  updateBookStatus(id: String!, status: String!): Book!
+  deleteCollection(id: String!): Boolean!
+  removeBookFromCollection(bookId: String!, collectionId: String!): Boolean!
+  updateBook(id: String!, input: UpdateBookInput!): UserBookResponseType
+  updateBookStatus(id: String!, status: String!): UserBookResponseType
+  updateCollection(id: String!, input: UpdateCollectionInput!): CollectionResponseType
   updateProfile(input: UpdateProfileInput!): User!
 }
 
-type Note {
-  author: User!
-  book: Book!
-  chapter: String
-  content: String!
-  createdAt: DateTime!
-  highlight: String
-  id: ID!
-  page: Float
-  personalThoughts: String
-  tags: [String!]
-  thoughts: [Thought!]
-  updatedAt: DateTime!
-}
-
 type Query {
-  book(id: String!): Book!
-  books(status: String): [Book!]!
+  book(id: String!): UserBookResponseType
+  books(status: String, tag: String): [UserBookResponseType!]!
+  collection(id: String!): CollectionResponseType
+  collectionBooks(collectionId: String!): [BookResponseType!]!
+  collections: [CollectionResponseType!]!
   me: User!
+  searchBooks(isbn: String, order: String, page: Int, query: String, size: Int, sort: String): BookSearchResponseType!
+  searchLocalBooks(query: String!): [BookResponseType!]!
   user(id: String!): User!
   users: [User!]!
 }
 
-type Stroke {
+type TagType {
+  books: [BookType!]
   createdAt: DateTime!
   id: ID!
-  sourceType: String!
-  strokeData: String!
-  thought: Thought!
+  name: String!
   updatedAt: DateTime!
-}
-
-type Thought {
-  childThoughts: [Thought!]
-  createdAt: DateTime!
-  depth: Float!
-  id: ID!
-  inputType: String!
-  note: Note!
-  orderIndex: Float!
-  parentThought: Thought
-  strokes: [Stroke!]
-  text: String
-  updatedAt: DateTime!
+  userId: String
 }
 
 input UpdateBookInput {
   author: String
-  coverImage: String
+  coverUrl: String
   description: String
+  discount: Int
   isbn: String
-  metadata: String
+  language: String
+  pageCount: Int
+  price: Int
   publishedDate: DateTime
   publisher: String
-  status: BookStatus
+  subTitle: String
   title: String
-  totalPages: Int
+}
+
+input UpdateCollectionInput {
+  coverUrl: String
+  description: String
+  name: String
 }
 
 input UpdateProfileInput {
@@ -151,6 +157,17 @@ type User {
   isVerified: Boolean!
   profileImage: String
   role: UserRole!
+}
+
+type UserBookResponseType {
+  book: BookType!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  id: ID!
+  startedAt: DateTime
+  status: String!
+  tags: [TagType!]
+  updatedAt: DateTime!
 }
 
 """The role of the user"""

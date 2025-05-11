@@ -5,7 +5,7 @@ import * as cookieParser from "cookie-parser";
 import * as request from "supertest";
 import { CreateBookDto } from "../../../src/books/dtos/create-book.dto";
 import { UpdateBookDto } from "../../../src/books/dtos/update-book.dto";
-import { BookStatus } from "../../../src/books/entities/book.entity";
+import { BookStatus } from "../../../src/books/entities/reading-status.entity";
 import { AuthTestUtil } from "../utils/auth-test.util";
 import { TestAppModule } from "../utils/test-app.module";
 
@@ -71,8 +71,7 @@ describe("Books (e2e)", () => {
         isbn: "9781234567897",
         description: "A test book for e2e testing",
         publisher: "Test Publisher",
-        totalPages: 300,
-        status: BookStatus.WANT_TO_READ,
+        pageCount: 300,
       };
 
       const response = await request(app.getHttpServer())
@@ -82,8 +81,9 @@ describe("Books (e2e)", () => {
         .expect(201);
 
       expect(response.body).toHaveProperty("id");
-      expect(response.body).toHaveProperty("title", "Test Book");
-      expect(response.body).toHaveProperty("author", "Test Author");
+      expect(response.body).toHaveProperty("book");
+      expect(response.body.book).toHaveProperty("title", "Test Book");
+      expect(response.body.book).toHaveProperty("author", "Test Author");
       expect(response.body).toHaveProperty("status", BookStatus.WANT_TO_READ);
 
       // Save book ID for later tests
@@ -102,7 +102,8 @@ describe("Books (e2e)", () => {
       // The first book should match our created book
       const firstBook = response.body[0];
       expect(firstBook).toHaveProperty("id", createdBookId);
-      expect(firstBook).toHaveProperty("title", "Test Book");
+      expect(firstBook).toHaveProperty("book");
+      expect(firstBook.book).toHaveProperty("title", "Test Book");
     });
 
     it("should filter books by status", async () => {
@@ -127,8 +128,9 @@ describe("Books (e2e)", () => {
         .expect(200);
 
       expect(response.body).toHaveProperty("id", createdBookId);
-      expect(response.body).toHaveProperty("title", "Test Book");
-      expect(response.body).toHaveProperty("author", "Test Author");
+      expect(response.body).toHaveProperty("book");
+      expect(response.body.book).toHaveProperty("title", "Test Book");
+      expect(response.body.book).toHaveProperty("author", "Test Author");
     });
 
     it("should update a book", async () => {
@@ -144,10 +146,11 @@ describe("Books (e2e)", () => {
         .expect(200);
 
       expect(response.body).toHaveProperty("id", createdBookId);
-      expect(response.body).toHaveProperty("title", "Updated Book Title");
-      expect(response.body).toHaveProperty("description", "Updated description for e2e testing");
+      expect(response.body).toHaveProperty("book");
+      expect(response.body.book).toHaveProperty("title", "Updated Book Title");
+      expect(response.body.book).toHaveProperty("description", "Updated description for e2e testing");
       // Original fields should remain unchanged
-      expect(response.body).toHaveProperty("author", "Test Author");
+      expect(response.body.book).toHaveProperty("author", "Test Author");
     });
 
     it("should update a book's status", async () => {
@@ -198,9 +201,70 @@ describe("Books (e2e)", () => {
       // The response should include our completed book
       const includedBook = response.body.find(book => book.id === completedBookId);
       expect(includedBook).toBeDefined();
-      expect(includedBook).toHaveProperty("title", "Completed Test Book");
+      expect(includedBook).toHaveProperty("book");
+      expect(includedBook.book).toHaveProperty("title", "Completed Test Book");
       expect(includedBook).toHaveProperty("status", BookStatus.COMPLETED);
       expect(includedBook).toHaveProperty("finishedAt");
+    });
+
+    // Test for data synchronization across devices
+    it("should sync book data across sessions/devices", async () => {
+      // Create a second session/user to simulate another device
+      const secondUser = await AuthTestUtil.createTestUser(app, {
+        email: "second-device@example.com",
+        password: "StrongP@ssword456!", // Use a strong password that meets requirements
+      });
+
+      const secondLoginResult = await AuthTestUtil.login(app, {
+        email: secondUser.email,
+        password: "StrongP@ssword456!", // Match the password used in creation
+      });
+
+      const secondAuthCookies = secondLoginResult.cookies;
+
+      // Create a book with the first user
+      const createBookDto: CreateBookDto = {
+        title: "Sync Test Book",
+        author: "Sync Author",
+        isbn: "9781234567897",
+      };
+
+      // Use a try-catch to get the error details
+      let firstUserResponse;
+      try {
+        firstUserResponse = await request(app.getHttpServer())
+          .post("/books")
+          .set("Cookie", authCookies)
+          .send(createBookDto);
+          
+        console.log("Book creation response:", firstUserResponse.status, firstUserResponse.body);
+        
+        expect(firstUserResponse.status).toBe(201);
+      } catch (error) {
+        console.error("Error creating book:", error);
+        throw error;
+      }
+
+      const syncBookId = firstUserResponse.body.id;
+
+      // Update the book with the second user (simulating another device)
+      const updateBookDto: UpdateBookDto = {
+        description: "Updated from second device",
+      };
+
+      await request(app.getHttpServer())
+        .patch(`/books/${syncBookId}`)
+        .set("Cookie", secondAuthCookies)
+        .send(updateBookDto)
+        .expect(200);
+
+      // Verify the first user can see the changes
+      const firstUserCheckResponse = await request(app.getHttpServer())
+        .get(`/books/${syncBookId}`)
+        .set("Cookie", authCookies)
+        .expect(200);
+
+      expect(firstUserCheckResponse.body.book).toHaveProperty("description", "Updated from second device");
     });
 
     it("should delete a book", async () => {
@@ -231,7 +295,7 @@ describe("Books (e2e)", () => {
       const invalidBookDto = {
         // Missing required title
         author: "Test Author",
-        totalPages: -10, // Invalid negative value
+        pageCount: -10, // Invalid negative value
       };
 
       await request(app.getHttpServer())

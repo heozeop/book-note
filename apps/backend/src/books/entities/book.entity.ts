@@ -1,23 +1,14 @@
 import {
   Collection,
   Entity,
-  Enum,
-  ManyToOne,
   OneToMany,
   PrimaryKey,
-  Property,
+  Property
 } from "@mikro-orm/core";
 import { v4 } from "uuid";
-import { User } from "../../auth/entities/user.entity";
-import { Note } from "../../notes/entities/note.entity";
-import { BookCollection } from "./book-collection.entity";
+import { UserBook } from "./user-book.entity";
 
-export enum BookStatus {
-  WANT_TO_READ = "want_to_read",
-  READING = "reading",
-  COMPLETED = "completed",
-  DNF = "dnf", // Did Not Finish
-}
+
 @Entity()
 export class Book {
   @PrimaryKey()
@@ -27,13 +18,19 @@ export class Book {
   title: string;
 
   @Property({ nullable: true })
+  subTitle?: string;
+
+  @Property({ nullable: true })
+  externalId?: string;
+
+  @Property({ nullable: true })
   author?: string;
 
   @Property({ nullable: true })
   isbn?: string;
 
   @Property({ nullable: true })
-  coverImage?: string;
+  coverUrl?: string;
 
   @Property({ nullable: true, type: "text" })
   description?: string;
@@ -43,33 +40,24 @@ export class Book {
 
   @Property({ nullable: true })
   publisher?: string;
+  
+  @Property({ nullable: true })
+  pageCount?: number;
 
-  @Enum(() => BookStatus)
-  status: BookStatus = BookStatus.WANT_TO_READ;
+  @Property({ nullable: true, columnType: 'decimal(10,2)' })
+  price?: number;
+
+  @Property({ nullable: true, columnType: 'decimal(10,2)' })
+  discount?: number;
 
   @Property({ nullable: true })
-  currentPage?: number;
-
-  @Property({ nullable: true })
-  totalPages?: number;
-
-  @Property({ nullable: true })
-  startedAt?: Date;
-
-  @Property({ nullable: true })
-  finishedAt?: Date;
+  language?: string;
 
   @Property({ type: "json", nullable: true })
   metadata?: Record<string, any>;
 
-  @ManyToOne(() => User)
-  owner: User;
-
-  @OneToMany(() => Note, (note) => note.book, { eager: true })
-  notes = new Collection<Note>(this);
-
-  @OneToMany(() => BookCollection, (bookCollection) => bookCollection.book)
-  bookCollections = new Collection<BookCollection>(this);
+  @OneToMany(() => UserBook, (userBook) => userBook.book)
+  userBooks = new Collection<UserBook>(this);
 
   @Property()
   createdAt: Date = new Date();

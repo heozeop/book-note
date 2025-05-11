@@ -1,9 +1,6 @@
-import { UserType } from "@/auth/graphql/types";
-import { BookStatus } from "@/books/entities/book.entity";
-import { NoteType } from "@/notes/graphql/types/note.type";
-import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
 
-@ObjectType("Book")
+@ObjectType()
 export class BookType {
   @Field(() => ID)
   id: string;
@@ -12,13 +9,16 @@ export class BookType {
   title: string;
 
   @Field({ nullable: true })
+  subTitle?: string;
+
+  @Field({ nullable: true })
   author?: string;
 
   @Field({ nullable: true })
   isbn?: string;
 
   @Field({ nullable: true })
-  coverImage?: string;
+  coverUrl?: string;
 
   @Field({ nullable: true })
   description?: string;
@@ -29,33 +29,24 @@ export class BookType {
   @Field({ nullable: true })
   publisher?: string;
 
-  @Field(() => BookStatus)
-  status: BookStatus;
+  @Field(() => Int, { nullable: true })
+  pageCount?: number;
+
+  @Field(() => Number, { nullable: true })
+  price?: number;
+
+  @Field(() => Number, { nullable: true })
+  discount?: number;
 
   @Field({ nullable: true })
-  currentPage?: number;
+  language?: string;
 
   @Field({ nullable: true })
-  totalPages?: number;
+  externalId?: string;
 
-  @Field({ nullable: true })
-  startedAt?: Date;
-
-  @Field({ nullable: true })
-  finishedAt?: Date;
-
-  @Field(() => String, { nullable: true })
-  metadata?: string;
-
-  @Field(() => UserType)
-  owner: UserType;
-
-  @Field(() => [NoteType], { nullable: true })
-  notes?: NoteType[];
-
-  @Field()
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field()
+  @Field(() => Date)
   updatedAt: Date;
 }

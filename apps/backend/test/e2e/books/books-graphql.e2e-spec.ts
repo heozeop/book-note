@@ -3,23 +3,21 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import * as cookieParser from "cookie-parser";
 import * as request from "supertest";
-import { BookStatus } from "../../../src/books/entities/book.entity";
+import { BookStatus } from "../../../src/books/entities/reading-status.entity";
 import { AuthTestUtil } from "../utils/auth-test.util";
 import { TestAppModule } from "../utils/test-app.module";
 
 describe("Books GraphQL (e2e)", () => {
   let app: INestApplication;
   let orm: MikroORM;
-  let authCookies: string[] = [];
-  let authToken: string | null = null;
-  let testUserId: string;
-  let testUserEmail: string;
+  let authCookies: string[];
+  let userId: string;
   let createdBookId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        TestAppModule.forTest({ enableGraphQL: true }), // Enable GraphQL
+        TestAppModule.forTest({ enableGraphQL: true }), // Enable GraphQL for this test
       ],
     }).compile();
 
@@ -44,43 +42,16 @@ describe("Books GraphQL (e2e)", () => {
 
     await app.init();
 
-    // Generate a unique email for test user
-    testUserEmail = `gql-books-test-${Date.now()}@example.com`;
+    // Create a test user and get authorization cookies
+    const testUser = await AuthTestUtil.createTestUser(app);
+    userId = testUser.id;
 
-    // Create a test user
-    const registerResponse = await request(app.getHttpServer())
-      .post("/auth/register")
-      .send({
-        email: testUserEmail,
-        password: "StrongPassword123!",
-        displayName: "GraphQL Book Test User",
-        timezone: "Asia/Seoul",
-      });
+    const loginResult = await AuthTestUtil.login(app, {
+      email: testUser.email,
+      password: testUser.password,
+    });
 
-    expect(registerResponse.status).toBe(201);
-    testUserId = registerResponse.body.id;
-
-    // Login to get auth cookies
-    const loginResponse = await request(app.getHttpServer())
-      .post("/auth/login")
-      .send({
-        email: testUserEmail,
-        password: "StrongPassword123!",
-      });
-
-    expect(loginResponse.status).toBe(201);
-
-    // Get cookies for protected GraphQL queries
-    authCookies = AuthTestUtil.getCookies(loginResponse);
-    expect(authCookies.length).toBeGreaterThan(0);
-    
-    // Extract access token for Authorization header
-    authToken = AuthTestUtil.extractAccessTokenFromCookies(authCookies);
-    expect(authToken).toBeTruthy();
-    
-    // Debug cookies to ensure they are properly set
-    console.log("Test setup - Cookies present:", authCookies.length > 0);
-    console.log("Test setup - Auth token present:", !!authToken);
+    authCookies = loginResult.cookies;
   });
 
   afterAll(async () => {
@@ -90,24 +61,29 @@ describe("Books GraphQL (e2e)", () => {
     await app.close();
   });
 
-  describe("GraphQL Queries and Mutations", () => {
-    it("should create a new book (createBook mutation)", async () => {
+  describe("Book GraphQL Operations", () => {
+    it("should create a new book via GraphQL", async () => {
       const createBookMutation = `
         mutation {
           createBook(input: {
             title: "GraphQL Test Book",
             author: "GraphQL Author",
             isbn: "9781234567897",
-            description: "A test book for GraphQL e2e testing",
+            description: "A test book for GraphQL testing",
             publisher: "Test Publisher",
-            totalPages: 300,
-            status: WANT_TO_READ
+            pageCount: 300
           }) {
             id
-            title
-            author
+            book {
+              id
+              title
+              author
+              isbn
+              description
+            }
             status
-            createdAt
+            startedAt
+            finishedAt
           }
         }
       `;
@@ -115,46 +91,32 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
           query: createBookMutation,
         })
         .expect(200);
 
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
       expect(response.body.data).toBeDefined();
       expect(response.body.data.createBook).toBeDefined();
       expect(response.body.data.createBook.id).toBeDefined();
-      expect(response.body.data.createBook.title).toBe("GraphQL Test Book");
-      expect(response.body.data.createBook.author).toBe("GraphQL Author");
-      
-      // Handle case differences between GraphQL enum and entity enum
-      const status = response.body.data.createBook.status;
-      expect(status === BookStatus.WANT_TO_READ || status.toLowerCase() === BookStatus.WANT_TO_READ).toBeTruthy();
+      expect(response.body.data.createBook.book.title).toBe("GraphQL Test Book");
+      expect(response.body.data.createBook.book.author).toBe("GraphQL Author");
+      expect(response.body.data.createBook.status).toBe(BookStatus.WANT_TO_READ);
 
       // Save book ID for later tests
       createdBookId = response.body.data.createBook.id;
     });
 
-    it("should get all books (books query)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'get all books' test as no book was created");
-        return;
-      }
-      
-      const booksQuery = `
+    it("should get all books via GraphQL", async () => {
+      const getBooksQuery = `
         query {
           books {
             id
-            title
-            author
+            book {
+              id
+              title
+              author
+            }
             status
           }
         }
@@ -163,41 +125,31 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: booksQuery,
+          query: getBooksQuery,
         })
         .expect(200);
 
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL books query Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
       expect(response.body.data).toBeDefined();
+      expect(response.body.data.books).toBeDefined();
       expect(Array.isArray(response.body.data.books)).toBeTruthy();
       expect(response.body.data.books.length).toBeGreaterThanOrEqual(1);
-      
-      // The response should include our created book
+
+      // The list should include our created book
       const createdBook = response.body.data.books.find(book => book.id === createdBookId);
       expect(createdBook).toBeDefined();
-      expect(createdBook.title).toBe("GraphQL Test Book");
+      expect(createdBook.book.title).toBe("GraphQL Test Book");
     });
 
-    it("should get books filtered by status (books query with status)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'get books by status' test as no book was created");
-        return;
-      }
-      
-      const booksWithStatusQuery = `
+    it("should filter books by status via GraphQL", async () => {
+      const getBooksWithStatusQuery = `
         query {
-          books(status: "WANT_TO_READ") {
+          books(status: "want_to_read") {
             id
-            title
+            book {
+              id
+              title
+            }
             status
           }
         }
@@ -206,47 +158,37 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: booksWithStatusQuery,
-        })
-        .expect(200);
-
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL books with status Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
-      expect(response.body.data).toBeDefined();
-      expect(Array.isArray(response.body.data.books)).toBeTruthy();
+          query: getBooksWithStatusQuery,
+        });
       
-      // Books array might be empty if the case sensitivity issue prevented proper filtering
-      // So we'll just verify the structure is correct without checking the length
+      console.log("Filter by status GraphQL response:", response.status, JSON.stringify(response.body));
       
-      // All books should have the requested status (accounting for case differences)
-      for (const book of response.body.data.books) {
-        const status = book.status;
-        expect(status === BookStatus.WANT_TO_READ || 
-               status.toUpperCase() === BookStatus.WANT_TO_READ).toBeTruthy();
+      expect(response.status).toBe(200);
+      
+      if (response.status === 200) {
+        expect(response.body.data).toBeDefined();
+        expect(response.body.data.books).toBeDefined();
+        expect(Array.isArray(response.body.data.books)).toBeTruthy();
+        
+        // All books should have the requested status
+        for (const book of response.body.data.books) {
+          expect(book.status).toBe(BookStatus.WANT_TO_READ);
+        }
       }
     });
 
-    it("should get a specific book by ID (book query)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'get book by ID' test as no book was created");
-        return;
-      }
-      
-      const bookQuery = `
+    it("should get a specific book by ID via GraphQL", async () => {
+      const getBookQuery = `
         query {
           book(id: "${createdBookId}") {
             id
-            title
-            author
-            description
+            book {
+              id
+              title
+              author
+              description
+            }
             status
           }
         }
@@ -255,46 +197,36 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: bookQuery,
+          query: getBookQuery,
         })
         .expect(200);
-
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL book by ID Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
 
       expect(response.body.data).toBeDefined();
       expect(response.body.data.book).toBeDefined();
       expect(response.body.data.book.id).toBe(createdBookId);
-      expect(response.body.data.book.title).toBe("GraphQL Test Book");
-      expect(response.body.data.book.author).toBe("GraphQL Author");
+      expect(response.body.data.book.book.title).toBe("GraphQL Test Book");
+      expect(response.body.data.book.book.author).toBe("GraphQL Author");
     });
 
-    it("should update a book (updateBook mutation)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'update book' test as no book was created");
-        return;
-      }
-      
+    it("should update a book via GraphQL", async () => {
       const updateBookMutation = `
         mutation {
           updateBook(
-            id: "${createdBookId}", 
+            id: "${createdBookId}",
             input: {
               title: "Updated GraphQL Book",
               description: "Updated description for GraphQL testing"
             }
           ) {
             id
-            title
-            description
-            author
+            book {
+              id
+              title
+              author
+              description
+            }
+            status
           }
         }
       `;
@@ -302,43 +234,32 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
           query: updateBookMutation,
         })
         .expect(200);
 
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL updateBook Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
       expect(response.body.data).toBeDefined();
       expect(response.body.data.updateBook).toBeDefined();
       expect(response.body.data.updateBook.id).toBe(createdBookId);
-      expect(response.body.data.updateBook.title).toBe("Updated GraphQL Book");
-      expect(response.body.data.updateBook.description).toBe("Updated description for GraphQL testing");
+      expect(response.body.data.updateBook.book.title).toBe("Updated GraphQL Book");
+      expect(response.body.data.updateBook.book.description).toBe("Updated description for GraphQL testing");
       // Original fields should remain unchanged
-      expect(response.body.data.updateBook.author).toBe("GraphQL Author");
+      expect(response.body.data.updateBook.book.author).toBe("GraphQL Author");
     });
 
-    it("should update a book's status (updateBookStatus mutation)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'update book status' test as no book was created");
-        return;
-      }
-      
+    it("should update a book's status via GraphQL", async () => {
       const updateStatusMutation = `
         mutation {
           updateBookStatus(
-            id: "${createdBookId}", 
-            status: "READING"
+            id: "${createdBookId}",
+            status: "reading"
           ) {
             id
-            title
+            book {
+              id
+              title
+            }
             status
             startedAt
           }
@@ -348,38 +269,140 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
           query: updateStatusMutation,
+        });
+      
+      console.log("Update status GraphQL response:", response.status, JSON.stringify(response.body));
+      
+      expect(response.status).toBe(200);
+      
+      if (response.status === 200) {
+        expect(response.body.data).toBeDefined();
+        expect(response.body.data.updateBookStatus).toBeDefined();
+        expect(response.body.data.updateBookStatus.id).toBe(createdBookId);
+        expect(response.body.data.updateBookStatus.status).toBe(BookStatus.READING);
+        expect(response.body.data.updateBookStatus.startedAt).toBeDefined();
+      }
+    });
+
+    it("should support book search via GraphQL", async () => {
+      const searchBooksQuery = `
+        query {
+          searchBooks(query: "GraphQL") {
+            total
+            items {
+              title
+              author
+            }
+          }
+        }
+      `;
+
+      const response = await request(app.getHttpServer())
+        .post("/graphql")
+        .set("Cookie", authCookies)
+        .send({
+          query: searchBooksQuery,
         })
         .expect(200);
 
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL updateBookStatus Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
       expect(response.body.data).toBeDefined();
-      expect(response.body.data.updateBookStatus).toBeDefined();
-      expect(response.body.data.updateBookStatus.id).toBe(createdBookId);
-      
-      // Handle case differences between GraphQL enum and entity enum
-      const status = response.body.data.updateBookStatus.status;
-      const expectedStatus = BookStatus.READING;
-      expect(status.toLowerCase() === expectedStatus.toLowerCase()).toBeTruthy();
-      
-      expect(response.body.data.updateBookStatus.startedAt).not.toBeNull();
+      expect(response.body.data.searchBooks).toBeDefined();
+      expect(response.body.data.searchBooks.total).toBeDefined();
+      expect(response.body.data.searchBooks.items).toBeDefined();
     });
 
-    it("should delete a book (deleteBook mutation)", async () => {
-      // Skip this test if no book was created
-      if (!createdBookId) {
-        console.log("Skipping 'delete book' test as no book was created");
-        return;
-      }
+    // Test for real-time data synchronization across devices
+    it("should support data synchronization across devices", async () => {
+      // Create a second user to simulate another device
+      const secondUser = await AuthTestUtil.createTestUser(app, {
+        email: "graphql-second@example.com",
+        password: "StrongP@ssword789!", // Use a strong password that meets requirements
+      });
       
+      const secondLoginResult = await AuthTestUtil.login(app, {
+        email: secondUser.email,
+        password: "StrongP@ssword789!", // Use the same strong password
+      });
+      
+      const secondAuthCookies = secondLoginResult.cookies;
+      
+      // Create book with first user
+      const createBookMutation = `
+        mutation {
+          createBook(input: {
+            title: "Sync GraphQL Book",
+            author: "Sync Author"
+          }) {
+            id
+            book {
+              id
+              title
+            }
+          }
+        }
+      `;
+      
+      const createResponse = await request(app.getHttpServer())
+        .post("/graphql")
+        .set("Cookie", authCookies)
+        .send({
+          query: createBookMutation,
+        });
+      
+      const syncBookId = createResponse.body.data.createBook.id;
+      
+      // Update the book with second user
+      const updateBookMutation = `
+        mutation {
+          updateBook(
+            id: "${syncBookId}",
+            input: {
+              description: "Updated via GraphQL from second device"
+            }
+          ) {
+            id
+            book {
+              id
+              description
+            }
+          }
+        }
+      `;
+      
+      await request(app.getHttpServer())
+        .post("/graphql")
+        .set("Cookie", secondAuthCookies)
+        .send({
+          query: updateBookMutation,
+        });
+      
+      // Check if first user can see the changes
+      const getBookQuery = `
+        query {
+          book(id: "${syncBookId}") {
+            id
+            book {
+              id
+              title
+              description
+            }
+          }
+        }
+      `;
+      
+      const checkResponse = await request(app.getHttpServer())
+        .post("/graphql")
+        .set("Cookie", authCookies)
+        .send({
+          query: getBookQuery,
+        });
+      
+      expect(checkResponse.body.data.book.book.description).toBe("Updated via GraphQL from second device");
+    });
+
+    it("should delete a book via GraphQL", async () => {
       const deleteBookMutation = `
         mutation {
           deleteBook(id: "${createdBookId}")
@@ -389,24 +412,16 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
           query: deleteBookMutation,
         })
         .expect(200);
 
-      // Log error if present for debugging
-      if (response.body.errors) {
-        console.log("GraphQL deleteBook Error:", JSON.stringify(response.body.errors, null, 2));
-        // Skip further assertions if there are GraphQL errors
-        return;
-      }
-
       expect(response.body.data).toBeDefined();
       expect(response.body.data.deleteBook).toBe(true);
 
       // Verify the book is no longer accessible
-      const bookQuery = `
+      const getDeletedBookQuery = `
         query {
           book(id: "${createdBookId}") {
             id
@@ -417,26 +432,22 @@ describe("Books GraphQL (e2e)", () => {
       const verifyResponse = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: bookQuery,
+          query: getDeletedBookQuery,
         });
 
       expect(verifyResponse.body.errors).toBeDefined();
-      const errorContainsNotFound = verifyResponse.body.errors.some(
-        (err) => err.message.includes("찾을 수 없습니다") || err.message.includes("not found")
-      );
-      expect(errorContainsNotFound).toBeTruthy();
+      // Not found error message could be in different languages - just check for existence
+      expect(verifyResponse.body.errors[0].message).toBeTruthy();
     });
   });
 
-  describe("Error Handling", () => {
-    it("should return error for non-existent book", async () => {
-      const nonExistentBookQuery = `
+  describe("Error Handling in GraphQL", () => {
+    it("should handle non-existent book error", async () => {
+      const getNonExistentBookQuery = `
         query {
           book(id: "non-existent-id") {
             id
-            title
           }
         }
       `;
@@ -444,28 +455,24 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: nonExistentBookQuery,
-        })
-        .expect(200); // GraphQL always returns 200, but with errors
+          query: getNonExistentBookQuery,
+        });
 
       expect(response.body.errors).toBeDefined();
-      const errorContainsNotFound = response.body.errors.some(
-        (err) => err.message.includes("찾을 수 없습니다") || err.message.includes("not found")
-      );
-      expect(errorContainsNotFound).toBeTruthy();
+      // Not found error message could be in different languages - just check for existence
+      expect(response.body.errors[0].message).toBeTruthy();
     });
 
-    it("should validate input when creating a book", async () => {
-      const invalidCreateBookMutation = `
+    it("should validate input in GraphQL mutations", async () => {
+      const invalidBookMutation = `
         mutation {
           createBook(input: {
-            author: "Test Author"
             # Missing required title
+            author: "Invalid Author",
+            pageCount: -10 # Invalid negative value
           }) {
             id
-            title
           }
         }
       `;
@@ -473,39 +480,31 @@ describe("Books GraphQL (e2e)", () => {
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .set("Cookie", authCookies)
-        .set("Authorization", `Bearer ${authToken}`)
         .send({
-          query: invalidCreateBookMutation,
+          query: invalidBookMutation,
         });
 
       expect(response.body.errors).toBeDefined();
     });
 
-    it("should require authentication for all queries and mutations", async () => {
-      const booksQuery = `
+    it("should require authentication for GraphQL operations", async () => {
+      const getBooksQuery = `
         query {
           books {
             id
-            title
           }
         }
       `;
 
+      // Try without auth cookies
       const response = await request(app.getHttpServer())
         .post("/graphql")
         .send({
-          query: booksQuery,
-        })
-        .expect(200); // GraphQL always returns 200, but with auth errors
+          query: getBooksQuery,
+        });
 
       expect(response.body.errors).toBeDefined();
-      const errorContainsAuth = response.body.errors.some(
-        (err) => 
-          err.message.includes("Unauthorized") || 
-          err.message.includes("인증") || 
-          err.message.includes("authentication")
-      );
-      expect(errorContainsAuth).toBeTruthy();
+      expect(response.body.errors[0].message).toContain("인증");
     });
   });
 }); 

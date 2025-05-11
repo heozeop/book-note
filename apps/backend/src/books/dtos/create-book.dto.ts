@@ -1,31 +1,38 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-  IsEnum,
+  IsDateString,
   IsISBN,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  MaxLength,
-  Min,
+  IsUrl,
+  Min
 } from "class-validator";
-import { BookStatus } from "../entities/book.entity";
 
 export class CreateBookDto {
   @ApiProperty({
     description: "책 제목",
     example: "클린 코드",
   })
-  @IsString({ message: "제목은 문자열이어야 합니다." })
-  @MaxLength(255, { message: "제목은 255자를 초과할 수 없습니다." })
+  @IsNotEmpty()
+  @IsString()
   title: string;
+
+  @ApiPropertyOptional({
+    description: "책 부제목",
+    example: "클린 코드의 모든 것",
+  })
+  @IsOptional()
+  @IsString()
+  subTitle?: string;
 
   @ApiPropertyOptional({
     description: "책 저자",
     example: "로버트 C. 마틴",
   })
   @IsOptional()
-  @IsString({ message: "저자는 문자열이어야 합니다." })
-  @MaxLength(255, { message: "저자는 255자를 초과할 수 없습니다." })
+  @IsString()
   author?: string;
 
   @ApiPropertyOptional({
@@ -33,7 +40,7 @@ export class CreateBookDto {
     example: "9788966262878",
   })
   @IsOptional()
-  @IsISBN(undefined, { message: "유효한 ISBN 형식이어야 합니다." })
+  @IsISBN()
   isbn?: string;
 
   @ApiPropertyOptional({
@@ -41,50 +48,67 @@ export class CreateBookDto {
     example: "https://example.com/cover.jpg",
   })
   @IsOptional()
-  @IsString({ message: "표지 이미지 URL은 문자열이어야 합니다." })
-  coverImage?: string;
+  @IsUrl()
+  coverUrl?: string;
 
   @ApiPropertyOptional({
     description: "책 설명",
     example: "프로그래밍 언어와 상관없이 모든 프로그래머가 읽어야 할 필독서...",
   })
   @IsOptional()
-  @IsString({ message: "설명은 문자열이어야 합니다." })
+  @IsString()
   description?: string;
-
-  @ApiPropertyOptional({
-    description: "출판사",
-    example: "인사이트",
-  })
-  @IsOptional()
-  @IsString({ message: "출판사는 문자열이어야 합니다." })
-  @MaxLength(100, { message: "출판사는 100자를 초과할 수 없습니다." })
-  publisher?: string;
 
   @ApiPropertyOptional({
     description: "출판일",
     example: "2013-12-12",
   })
   @IsOptional()
+  @IsDateString()
   publishedDate?: Date;
+
+  @ApiPropertyOptional({
+    description: "출판사",
+    example: "인사이트",
+  })
+  @IsOptional()
+  @IsString()
+  publisher?: string;
 
   @ApiPropertyOptional({
     description: "총 페이지 수",
     example: 584,
   })
   @IsOptional()
-  @IsNumber({}, { message: "총 페이지 수는 숫자여야 합니다." })
-  @Min(0, { message: "총 페이지 수는 0 이상이어야 합니다." })
-  totalPages?: number;
+  @IsNumber()
+  @Min(1)
+  pageCount?: number;
 
   @ApiPropertyOptional({
-    description: "책 상태",
-    enum: BookStatus,
-    example: BookStatus.WANT_TO_READ,
+    description: "가격",
+    example: 25000,
   })
   @IsOptional()
-  @IsEnum(BookStatus, { message: "유효한 책 상태가 아닙니다." })
-  status?: BookStatus;
+  @IsNumber()
+  @Min(0)
+  price?: number;
+
+  @ApiPropertyOptional({
+    description: "할인율",
+    example: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discount?: number;
+
+  @ApiPropertyOptional({
+    description: "언어",
+    example: "한국어",
+  })
+  @IsOptional()
+  @IsString()
+  language?: string;
 
   @ApiPropertyOptional({
     description: "추가 메타데이터",
@@ -92,4 +116,12 @@ export class CreateBookDto {
   })
   @IsOptional()
   metadata?: Record<string, any>;
+
+  @ApiPropertyOptional({
+    description: "외부 책 ID",
+    example: "123456789",
+  })
+  @IsOptional()
+  @IsString()
+  externalId?: string;
 }

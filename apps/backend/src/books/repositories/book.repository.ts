@@ -1,7 +1,8 @@
-import { EntityManager } from "@mikro-orm/core";
+import { EntityManager, FilterQuery, FindOneOptions } from "@mikro-orm/core";
 import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "../../common/repositories/base.repository";
-import { Book, BookStatus } from "../entities/book.entity";
+import { Book } from "../entities/book.entity";
+import { Loaded } from "@mikro-orm/core";
 
 @Injectable()
 export class BookRepository extends BaseRepository<Book> {
@@ -10,61 +11,76 @@ export class BookRepository extends BaseRepository<Book> {
   }
 
   /**
-   * 사용자 ID로 책을 찾습니다.
-   * @param ownerId 소유자 ID
+   * Override findOne to enhance behavior
+   * @param where Query filter or ID string
+   * @param options Find options
+   * @returns Book or null
+   */
+  override async findOne<Hint extends string = never, Fields extends string = "*", Excludes extends string = never>(
+    where: string | FilterQuery<Book>,
+    options?: FindOneOptions<Book, Hint, Fields, Excludes>,
+  ): Promise<Loaded<Book, Hint, Fields, Excludes> | null> {
+    if (typeof where === 'string') {
+      return super.findOne({ id: where } as FilterQuery<Book>, options);
+    }
+    return super.findOne(where, options);
+  }
+
+  /**
+   * 특정 ISBN으로 책을 찾습니다.
+   * @param isbn ISBN
+   * @returns 책 (또는 null)
+   */
+  async findByIsbn(isbn: string): Promise<Book | null> {
+    return this.findOne({ isbn });
+  }
+
+  /**
+   * Naver Book ID로 책을 찾습니다.
+   * @param naverBookId Naver Book ID
+   * @returns 책 (또는 null)
+   */
+  async findByExternalBookId(externalBookId: string): Promise<Book | null> {
+    return this.findOne({ externalId: externalBookId });
+  }
+
+  /**
+   * 제목과 저자로 책을 찾습니다.
+   * @param title 제목
+   * @param author 저자
+   * @returns 책 (또는 null)
+   */
+  async findByTitleAndAuthor(title: string, author: string): Promise<Book | null> {
+    return this.findOne({ title, author });
+  }
+
+  /**
+   * 제목으로 책을 검색합니다.
+   * @param titleQuery 제목 쿼리 (부분 일치)
    * @returns 책 목록
    */
-  async findByOwnerId(ownerId: string): Promise<Book[]> {
-    return this.find({ owner: ownerId });
+  async findByTitleContaining(titleQuery: string): Promise<Book[]> {
+    const titleFilter: FilterQuery<Book> = { title: { $like: `%${titleQuery}%` } };
+    return this.find(titleFilter, { limit: 20 });
   }
 
   /**
-   * 책 ID와 소유자 ID로 책을 찾습니다.
-   * @param id 책 ID
-   * @param ownerId 소유자 ID
-   * @returns 책 또는 null
-   */
-  async findByIdAndOwnerId(id: string, ownerId: string): Promise<Book | null> {
-    return this.findOne({ id, owner: ownerId });
-  }
-
-  /**
-   * 상태별로 책을 찾습니다.
-   * @param status 책 상태
-   * @param ownerId 소유자 ID
+   * 여러 ISBN으로 책을 찾습니다.
+   * @param isbns ISBN 배열
    * @returns 책 목록
    */
-  async findByStatus(status: BookStatus, ownerId: string): Promise<Book[]> {
-    return this.find({ status, owner: ownerId });
+  async findByIsbns(isbns: string[]): Promise<Book[]> {
+    return this.find({ isbn: { $in: isbns } });
   }
 
   /**
-   * 특정 기간 동안 완료된 책을 찾습니다.
-   * @param ownerId 소유자 ID
-   * @param startDate 시작 날짜
-   * @param endDate 종료 날짜
-   * @returns 완료된 책 목록
-   */
-  async findCompletedBetweenDates(
-    ownerId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Book[]> {
-    return this.find({
-      owner: ownerId,
-      status: BookStatus.COMPLETED,
-      finishedAt: { $gte: startDate, $lte: endDate },
-    });
-  }
-
-  /**
-   * 책을 업데이트합니다 (nativeUpdate 사용).
+   * 책 정보를 업데이트합니다.
    * @param id 책 ID
-   * @param data 업데이트할 데이터
-   * @returns 영향 받은 행 수
+   * @param updateData 업데이트할 데이터
+   * @returns 영향을 받은 레코드 수
    */
-  async updateBook(id: string, data: Partial<Book>): Promise<number> {
-    const result = await this.nativeUpdate({ id }, data);
+  async updateBook(id: string, updateData: Partial<Book>): Promise<number> {
+    const result = await this.nativeUpdate({ id }, updateData);
     return result;
   }
 
@@ -75,16 +91,6 @@ export class BookRepository extends BaseRepository<Book> {
    */
   async deleteBook(id: string): Promise<number> {
     const result = await this.nativeDelete({ id });
-    return result;
-  }
-
-  /**
-   * 사용자의 모든 책을 삭제합니다 (nativeDelete 사용).
-   * @param ownerId 소유자 ID
-   * @returns 영향 받은 행 수
-   */
-  async deleteAllBooksByOwnerId(ownerId: string): Promise<number> {
-    const result = await this.nativeDelete({ owner: ownerId });
     return result;
   }
 }

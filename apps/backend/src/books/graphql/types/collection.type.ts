@@ -1,10 +1,9 @@
-import { UserType } from "@/auth/graphql/types";
-import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { Field, ObjectType } from "@nestjs/graphql";
 import { BookType } from "./book.type";
 
-@ObjectType("Collection")
+@ObjectType()
 export class CollectionType {
-  @Field(() => ID)
+  @Field()
   id: string;
 
   @Field()
@@ -14,13 +13,7 @@ export class CollectionType {
   description?: string;
 
   @Field({ nullable: true })
-  color?: string;
-
-  @Field()
-  isDefault: boolean;
-
-  @Field(() => UserType)
-  owner: UserType;
+  coverUrl?: string;
 
   @Field(() => [BookType], { nullable: true })
   books?: BookType[];

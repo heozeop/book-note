@@ -1,10 +1,9 @@
 import { MikroORM } from '@mikro-orm/core';
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { User } from '../../../../src/auth/entities/user.entity';
 import { CreateBookDto } from '../../../../src/books/dtos/create-book.dto';
-import { UpdateBookDto } from '../../../../src/books/dtos/update-book.dto';
-import { Book, BookStatus } from '../../../../src/books/entities/book.entity';
+import { Book } from '../../../../src/books/entities/book.entity';
+import { BookItem } from '../../../../src/books/interfaces/book-search.interface';
 import { BookRepository } from '../../../../src/books/repositories/book.repository';
 import { BookService } from '../../../../src/books/services/book.service';
 import { BooksTestModule } from '../books-test.module';
@@ -12,16 +11,23 @@ import { BooksTestModule } from '../books-test.module';
 describe('BookService', () => {
   let service: BookService;
   let repository: BookRepository;
+  let bookSearchService: any; // IBookSearchService
   let orm: MikroORM;
-  let testUser: User;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [BooksTestModule],
-    }).compile();
+    })
+    .overrideProvider('BOOK_SEARCH_SERVICE')
+    .useValue({
+      searchByIsbn: jest.fn(),
+      searchByTitle: jest.fn(),
+    })
+    .compile();
 
     service = module.get<BookService>(BookService);
     repository = module.get<BookRepository>(BookRepository);
+    bookSearchService = module.get('BOOK_SEARCH_SERVICE');
     orm = module.get<MikroORM>(MikroORM);
 
     await orm.getSchemaGenerator().createSchema();
@@ -29,14 +35,7 @@ describe('BookService', () => {
 
   beforeEach(async () => {
     await orm.getSchemaGenerator().clearDatabase();
-    
-    testUser = new User();
-    testUser.email = 'test@example.com';
-    testUser.passwordHash = 'hashed_password';
-    testUser.displayName = 'Test User';
-    
-    await orm.em.persistAndFlush(testUser);
-    orm.em.clear();
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {
@@ -47,6 +46,7 @@ describe('BookService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(repository).toBeDefined();
+    expect(bookSearchService).toBeDefined();
   });
 
   describe('createBook', () => {
@@ -56,25 +56,24 @@ describe('BookService', () => {
         title: 'Test Book',
         author: 'Test Author',
         isbn: '9781234567897',
-        coverImage: 'https://example.com/cover.jpg',
+        coverUrl: 'https://example.com/cover.jpg',
         description: 'A test book description',
         publisher: 'Test Publisher',
         publishedDate: new Date('2023-01-01'),
-        totalPages: 300,
-        status: BookStatus.WANT_TO_READ,
+        pageCount: 300,
+        price: 25000,
         metadata: { genre: 'Fiction', tags: ['test', 'fantasy'] },
       };
 
       // When
-      const result = await service.createBook(createBookDto, testUser);
+      const result = await service.createBook(createBookDto);
 
       // Then
       expect(result).toBeDefined();
       expect(result.title).toBe('Test Book');
       expect(result.author).toBe('Test Author');
       expect(result.isbn).toBe('9781234567897');
-      expect(result.status).toBe(BookStatus.WANT_TO_READ);
-      expect(result.owner.id).toBe(testUser.id);
+      expect(result.pageCount).toBe(300);
       
       // Verify it was saved to the database
       const savedBook = await repository.findOne({ title: 'Test Book' });
@@ -89,35 +88,99 @@ describe('BookService', () => {
       };
 
       // When
-      const result = await service.createBook(createBookDto, testUser);
+      const result = await service.createBook(createBookDto);
 
       // Then
       expect(result).toBeDefined();
       expect(result.title).toBe('Minimal Book');
       expect(result.author).toBeUndefined();
-      expect(result.status).toBe(BookStatus.WANT_TO_READ); // Default status
-      expect(result.owner.id).toBe(testUser.id);
+    });
+
+    it('should return existing book if found by ISBN', async () => {
+      // Given
+      const existingBook = new Book();
+      existingBook.title = 'Existing Book';
+      existingBook.isbn = '9781234567897';
+      
+      await orm.em.persistAndFlush(existingBook);
+      orm.em.clear();
+      
+      const createBookDto: CreateBookDto = {
+        title: 'Different Title',
+        isbn: '9781234567897',
+      };
+      
+      // When
+      const result = await service.createBook(createBookDto);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.id).toBe(existingBook.id);
+      expect(result.title).toBe('Existing Book');
+    });
+    
+    it('should return existing book if found by naverBookId', async () => {
+      // Given
+      const existingBook = new Book();
+      existingBook.title = 'Existing Book';
+      existingBook.naverBookId = '12345';
+      
+      await orm.em.persistAndFlush(existingBook);
+      orm.em.clear();
+      
+      const createBookDto: CreateBookDto = {
+        title: 'Different Title',
+        naverBookId: '12345',
+      };
+      
+      // When
+      const result = await service.createBook(createBookDto);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.id).toBe(existingBook.id);
+      expect(result.title).toBe('Existing Book');
+    });
+    
+    it('should return existing book if found by title and author', async () => {
+      // Given
+      const existingBook = new Book();
+      existingBook.title = 'Existing Book';
+      existingBook.author = 'Existing Author';
+      
+      await orm.em.persistAndFlush(existingBook);
+      orm.em.clear();
+      
+      const createBookDto: CreateBookDto = {
+        title: 'Existing Book',
+        author: 'Existing Author',
+      };
+      
+      // When
+      const result = await service.createBook(createBookDto);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.id).toBe(existingBook.id);
     });
   });
 
   describe('findAllBooks', () => {
-    it('should find all books for a user', async () => {
+    it('should find all books', async () => {
       // Given
       const book1 = new Book();
       book1.title = 'Book 1';
       book1.author = 'Author 1';
-      book1.owner = testUser;
 
       const book2 = new Book();
       book2.title = 'Book 2';
       book2.author = 'Author 2';
-      book2.owner = testUser;
 
       await orm.em.persistAndFlush([book1, book2]);
       orm.em.clear();
 
       // When
-      const result = await service.findAllBooks(testUser.id);
+      const result = await service.findAllBooks();
 
       // Then
       expect(result).toBeDefined();
@@ -126,9 +189,9 @@ describe('BookService', () => {
       expect(result[1].title).toBe('Book 2');
     });
 
-    it('should return empty array if user has no books', async () => {
+    it('should return empty array if no books', async () => {
       // When
-      const result = await service.findAllBooks(testUser.id);
+      const result = await service.findAllBooks();
 
       // Then
       expect(result).toBeDefined();
@@ -142,298 +205,238 @@ describe('BookService', () => {
       const book = new Book();
       book.title = 'Test Book';
       book.author = 'Test Author';
-      book.owner = testUser;
 
       await orm.em.persistAndFlush(book);
       orm.em.clear();
 
       // When
-      const result = await service.findBookById(book.id, testUser.id);
+      const result = await service.findBookById(book.id);
 
       // Then
       expect(result).toBeDefined();
       expect(result.id).toBe(book.id);
       expect(result.title).toBe('Test Book');
-      expect(result.owner.id).toBe(testUser.id);
     });
 
     it('should throw NotFoundException if book not found', async () => {
       // When & Then
-      await expect(service.findBookById('non-existent-id', testUser.id))
+      await expect(service.findBookById('non-existent-id'))
         .rejects
         .toThrow(NotFoundException);
-    });
-  });
-
-  describe('findBooksByStatus', () => {
-    it('should find books by status', async () => {
-      // Given
-      const book1 = new Book();
-      book1.title = 'Reading Book';
-      book1.author = 'Author 1';
-      book1.status = BookStatus.READING;
-      book1.owner = testUser;
-
-      const book2 = new Book();
-      book2.title = 'Completed Book';
-      book2.author = 'Author 2';
-      book2.status = BookStatus.COMPLETED;
-      book2.owner = testUser;
-
-      await orm.em.persistAndFlush([book1, book2]);
-      orm.em.clear();
-
-      // When
-      const result = await service.findBooksByStatus(BookStatus.READING, testUser.id);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.length).toBe(1);
-      expect(result[0].title).toBe('Reading Book');
-      expect(result[0].status).toBe(BookStatus.READING);
-    });
-
-    it('should return empty array if no books with specified status', async () => {
-      // Given
-      const book = new Book();
-      book.title = 'Reading Book';
-      book.author = 'Test Author';
-      book.status = BookStatus.READING;
-      book.owner = testUser;
-
-      await orm.em.persistAndFlush(book);
-      orm.em.clear();
-
-      // When
-      const result = await service.findBooksByStatus(BookStatus.COMPLETED, testUser.id);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.length).toBe(0);
-    });
-  });
-
-  describe('findCompletedBooks', () => {
-    it('should find completed books in a date range', async () => {
-      // Given
-      const startDate = new Date('2023-01-01');
-      const endDate = new Date('2023-06-30');
-      
-      const book1 = new Book();
-      book1.title = 'Early Completed Book';
-      book1.author = 'Author 1';
-      book1.status = BookStatus.COMPLETED;
-      book1.finishedAt = new Date('2023-02-15');
-      book1.owner = testUser;
-
-      const book2 = new Book();
-      book2.title = 'Late Completed Book';
-      book2.author = 'Author 2';
-      book2.status = BookStatus.COMPLETED;
-      book2.finishedAt = new Date('2023-08-15');
-      book2.owner = testUser;
-
-      await orm.em.persistAndFlush([book1, book2]);
-      orm.em.clear();
-
-      // When
-      const result = await service.findCompletedBooks(testUser.id, startDate, endDate);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.length).toBe(1);
-      expect(result[0].title).toBe('Early Completed Book');
-    });
-
-    it('should return empty array if no completed books in the date range', async () => {
-      // When
-      const result = await service.findCompletedBooks(
-        testUser.id,
-        new Date('2023-01-01'),
-        new Date('2023-12-31')
-      );
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.length).toBe(0);
     });
   });
 
   describe('updateBook', () => {
-    it('should update a book', async () => {
+    it('should update a book successfully', async () => {
       // Given
       const book = new Book();
-      book.title = 'Old Title';
-      book.author = 'Old Author';
-      book.status = BookStatus.WANT_TO_READ;
-      book.owner = testUser;
-
+      book.title = 'Original Title';
+      book.author = 'Original Author';
+      
       await orm.em.persistAndFlush(book);
       orm.em.clear();
-
-      const updateBookDto: UpdateBookDto = {
-        title: 'New Title',
-        author: 'New Author',
-        description: 'Updated description',
+      
+      const updateData: Partial<Book> = {
+        title: 'Updated Title',
+        description: 'Updated Description',
       };
-
+      
       // When
-      const result = await service.updateBook(book.id, updateBookDto, testUser.id);
-
+      const result = await service.updateBook(book.id, updateData);
+      
       // Then
       expect(result).toBeDefined();
       expect(result.id).toBe(book.id);
-      expect(result.title).toBe('New Title');
-      expect(result.author).toBe('New Author');
-      expect(result.description).toBe('Updated description');
-      expect(result.status).toBe(BookStatus.WANT_TO_READ); // Status should not change
+      expect(result.title).toBe('Updated Title');
+      expect(result.description).toBe('Updated Description');
+      expect(result.author).toBe('Original Author');
     });
-
-    it('should set startedAt when status changes to READING', async () => {
-      // Given
-      const book = new Book();
-      book.title = 'Test Book';
-      book.author = 'Test Author';
-      book.status = BookStatus.WANT_TO_READ;
-      book.owner = testUser;
-
-      await orm.em.persistAndFlush(book);
-      orm.em.clear();
-
-      const updateBookDto: UpdateBookDto = {
-        status: BookStatus.READING,
-      };
-
-      // When
-      const result = await service.updateBook(book.id, updateBookDto, testUser.id);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.status).toBe(BookStatus.READING);
-      expect(result.startedAt).toBeDefined();
-    });
-
-    it('should set finishedAt when status changes to COMPLETED', async () => {
-      // Given
-      const book = new Book();
-      book.title = 'Test Book';
-      book.author = 'Test Author';
-      book.status = BookStatus.READING;
-      book.startedAt = new Date('2023-01-01');
-      book.owner = testUser;
-
-      await orm.em.persistAndFlush(book);
-      orm.em.clear();
-
-      const updateBookDto: UpdateBookDto = {
-        status: BookStatus.COMPLETED,
-      };
-
-      // When
-      const result = await service.updateBook(book.id, updateBookDto, testUser.id);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.status).toBe(BookStatus.COMPLETED);
-      expect(result.finishedAt).toBeDefined();
-    });
-
+    
     it('should throw NotFoundException if book not found', async () => {
-      // Given
-      const updateBookDto: UpdateBookDto = {
-        title: 'New Title',
-      };
-
       // When & Then
-      await expect(service.updateBook('non-existent-id', updateBookDto, testUser.id))
+      await expect(service.updateBook('non-existent-id', { title: 'New Title' }))
         .rejects
         .toThrow(NotFoundException);
     });
   });
-
-  describe('updateBookStatus', () => {
-    it('should update book status', async () => {
-      // Given
-      const book = new Book();
-      book.title = 'Test Book';
-      book.author = 'Test Author';
-      book.status = BookStatus.WANT_TO_READ;
-      book.owner = testUser;
-
-      await orm.em.persistAndFlush(book);
-      orm.em.clear();
-
-      // When
-      const result = await service.updateBookStatus(book.id, BookStatus.READING, testUser.id);
-
-      // Then
-      expect(result).toBeDefined();
-      expect(result.status).toBe(BookStatus.READING);
-      expect(result.startedAt).toBeDefined();
-    });
-  });
-
+  
   describe('deleteBook', () => {
-    it('should delete a book', async () => {
+    it('should delete a book successfully', async () => {
       // Given
       const book = new Book();
       book.title = 'Book to Delete';
-      book.author = 'Test Author';
-      book.owner = testUser;
-
+      
       await orm.em.persistAndFlush(book);
       orm.em.clear();
-
+      
       // When
-      const result = await service.deleteBook(book.id, testUser.id);
-      expect(result).toBe(true);
-
-
+      const result = await service.deleteBook(book.id);
+      
       // Then
-      await expect(service.findBookById(book.id, testUser.id))
-        .rejects
-        .toThrow(NotFoundException);
+      expect(result).toBe(true);
+      
+      // Verify it was deleted from the database
+      const deletedBook = await repository.findOne(book.id);
+      expect(deletedBook).toBeNull();
     });
-
+    
     it('should throw NotFoundException if book not found', async () => {
       // When & Then
-      await expect(service.deleteBook('non-existent-id', testUser.id))
+      await expect(service.deleteBook('non-existent-id'))
         .rejects
         .toThrow(NotFoundException);
     });
   });
-
-  describe('deleteAllUserBooks', () => {
-    it('should delete all books for a user', async () => {
+  
+  describe('searchBooksByTitleQuery', () => {
+    it('should find books by title query', async () => {
       // Given
       const book1 = new Book();
-      book1.title = 'Book 1';
-      book1.author = 'Author 1';
-      book1.owner = testUser;
-
+      book1.title = 'Design Patterns';
+      
       const book2 = new Book();
-      book2.title = 'Book 2';
-      book2.author = 'Author 2';
-      book2.owner = testUser;
-
-      await orm.em.persistAndFlush([book1, book2]);
+      book2.title = 'Clean Code';
+      
+      const book3 = new Book();
+      book3.title = 'Domain-Driven Design';
+      
+      await orm.em.persistAndFlush([book1, book2, book3]);
       orm.em.clear();
-
+      
       // When
-      const result = await service.deleteAllUserBooks(testUser.id);
-      const remainingBooks = await repository.findByOwnerId(testUser.id);
-
+      const result = await service.searchBooksByTitleQuery('Design');
+      
       // Then
-      expect(result).toBe(2); // 2 books deleted
-      expect(remainingBooks.length).toBe(0);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(2);
+      expect(result.map(b => b.title).sort()).toEqual(['Design Patterns', 'Domain-Driven Design'].sort());
     });
-
-    it('should return 0 if user has no books', async () => {
+    
+    it('should return empty array if no matches', async () => {
+      // Given
+      const book = new Book();
+      book.title = 'Clean Code';
+      
+      await orm.em.persistAndFlush(book);
+      orm.em.clear();
+      
       // When
-      const result = await service.deleteAllUserBooks(testUser.id);
-
+      const result = await service.searchBooksByTitleQuery('NonExistentTitle');
+      
       // Then
-      expect(result).toBe(0);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(0);
+    });
+  });
+  
+  describe('createBookFromIsbn', () => {
+    it('should create a book from ISBN using search service', async () => {
+      // Given
+      const isbn = '9788966260959';
+      const mockBookData: BookItem = {
+        title: 'Clean Code',
+        author: 'Robert C. Martin',
+        isbn: '9788966260959',
+        coverUrl: 'https://example.com/cover.jpg',
+        publisher: 'Pearson',
+        description: 'A handbook of agile software craftsmanship',
+      };
+      
+      jest.spyOn(bookSearchService, 'searchByIsbn').mockResolvedValue(mockBookData);
+      jest.spyOn(service, 'createBookFromSearchData').mockResolvedValue({
+        id: 'new-id',
+        ...mockBookData,
+      } as Book);
+      
+      // When
+      const result = await service.createBookFromIsbn(isbn);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.title).toBe('Clean Code');
+      expect(result.isbn).toBe(isbn);
+      expect(bookSearchService.searchByIsbn).toHaveBeenCalledWith(isbn);
+      expect(service.createBookFromSearchData).toHaveBeenCalledWith(mockBookData);
+    });
+    
+    it('should return existing book if already in database', async () => {
+      // Given
+      const isbn = '9788966260959';
+      const existingBook = new Book();
+      existingBook.title = 'Existing Book';
+      existingBook.isbn = isbn;
+      
+      await orm.em.persistAndFlush(existingBook);
+      orm.em.clear();
+      
+      // When
+      const result = await service.createBookFromIsbn(isbn);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.id).toBe(existingBook.id);
+      expect(result.title).toBe('Existing Book');
+      expect(bookSearchService.searchByIsbn).not.toHaveBeenCalled();
+    });
+    
+    it('should throw NotFoundException if no book found with ISBN', async () => {
+      // Given
+      const isbn = '9780000000000';
+      jest.spyOn(bookSearchService, 'searchByIsbn').mockResolvedValue(null);
+      
+      // When & Then
+      await expect(service.createBookFromIsbn(isbn))
+        .rejects
+        .toThrow(NotFoundException);
+      expect(bookSearchService.searchByIsbn).toHaveBeenCalledWith(isbn);
+    });
+  });
+  
+  describe('createBookFromSearchData', () => {
+    it('should create a book from search data', async () => {
+      // Given
+      const bookData: BookItem = {
+        title: 'Clean Code',
+        author: 'Robert C. Martin',
+        isbn: '9788966260959',
+        coverUrl: 'https://example.com/cover.jpg',
+        publisher: 'Pearson',
+        description: 'A handbook of agile software craftsmanship',
+        externalId: '12345'
+      };
+      
+      // When
+      const result = await service.createBookFromSearchData(bookData);
+      
+      // Then
+      expect(result).toBeDefined();
+      expect(result.title).toBe('Clean Code');
+      expect(result.author).toBe('Robert C. Martin');
+      expect(result.isbn).toBe('9788966260959');
+      expect(result.naverBookId).toBe('12345');
+      
+      // Verify it was saved to the database
+      const savedBook = await repository.findOne({ naverBookId: '12345' });
+      expect(savedBook).toBeDefined();
+      expect(savedBook?.id).toBe(result.id);
+    });
+  });
+  
+  describe('searchBooksByTitle', () => {
+    it('should call search service searchByTitle', async () => {
+      // Given
+      const title = 'Clean Code';
+      const options = { display: 10, start: 1 };
+      const mockResponse = { items: [] };
+      
+      jest.spyOn(bookSearchService, 'searchByTitle').mockResolvedValue(mockResponse);
+      
+      // When
+      const result = await service.searchBooksByTitle(title, options);
+      
+      // Then
+      expect(result).toBe(mockResponse);
+      expect(bookSearchService.searchByTitle).toHaveBeenCalledWith(title, options);
     });
   });
 }); 

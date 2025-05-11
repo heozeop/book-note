@@ -1,64 +1,89 @@
-import { BookStatus } from "@/books/entities/book.entity";
 import { Field, InputType, Int } from "@nestjs/graphql";
+import { Type } from "class-transformer";
 import {
-  IsEnum,
+  IsDateString,
   IsISBN,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  MaxLength,
+  IsUrl,
   Min,
 } from "class-validator";
+
 @InputType()
 export class CreateBookInput {
   @Field()
-  @IsString({ message: "제목은 문자열이어야 합니다." })
-  @MaxLength(255, { message: "제목은 255자를 초과할 수 없습니다." })
+  @IsNotEmpty()
+  @IsString()
   title: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString({ message: "저자는 문자열이어야 합니다." })
-  @MaxLength(255, { message: "저자는 255자를 초과할 수 없습니다." })
+  @IsString()
+  subTitle?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
   author?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsISBN(undefined, { message: "유효한 ISBN 형식이어야 합니다." })
+  @IsISBN()
   isbn?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString({ message: "표지 이미지 URL은 문자열이어야 합니다." })
-  coverImage?: string;
+  @IsUrl()
+  coverUrl?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString({ message: "설명은 문자열이어야 합니다." })
+  @IsString()
   description?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString({ message: "출판사는 문자열이어야 합니다." })
-  @MaxLength(100, { message: "출판사는 100자를 초과할 수 없습니다." })
-  publisher?: string;
+  @IsDateString()
+  @Type(() => Date)
+  publishedDate?: Date;
 
   @Field({ nullable: true })
   @IsOptional()
-  publishedDate?: Date;
+  @IsString()
+  publisher?: string;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()
-  @IsNumber({}, { message: "총 페이지 수는 숫자여야 합니다." })
-  @Min(0, { message: "총 페이지 수는 0 이상이어야 합니다." })
-  totalPages?: number;
+  @IsNumber()
+  @Min(1)
+  pageCount?: number;
 
-  @Field(() => BookStatus, { nullable: true })
+  @Field(() => Int, { nullable: true })
   @IsOptional()
-  @IsEnum(BookStatus, { message: "유효한 책 상태가 아닙니다." })
-  status?: BookStatus;
+  @IsNumber()
+  @Min(0)
+  price?: number;
 
-  @Field(() => String, { nullable: true })
+  @Field(() => Int, { nullable: true })
   @IsOptional()
-  metadata?: Record<string, any>;
+  @IsNumber()
+  @Min(0)
+  discount?: number;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  externalId?: string;
+
+  // Remove the problematic Object field
+  // @Field(() => Object, { nullable: true })
+  // @IsOptional()
+  // metadata?: Record<string, any>;
 }
