@@ -11,6 +11,7 @@ import { BadRequestException, UseGuards } from "@nestjs/common";
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 
 @Resolver(() => UserType)
+@UseGuards(JwtAuthGuard)
 export class UserResolver {
   constructor(
     private readonly authService: AuthService,
@@ -19,7 +20,6 @@ export class UserResolver {
   ) {}
 
   @Query(() => [UserType])
-  @UseGuards(JwtAuthGuard)
   async users(): Promise<UserType[]> {
     // 관리자만 접근 가능하도록 구현해야 함
     const users = await this.authService.findAllUsers();
@@ -27,7 +27,6 @@ export class UserResolver {
   }
 
   @Query(() => UserType)
-  @UseGuards(JwtAuthGuard)
   async user(@Args("id") id: string): Promise<UserType> {
     // 관리자만 접근 가능하도록 구현해야 함
     const user = await this.authService.findUserById(id);
@@ -39,7 +38,6 @@ export class UserResolver {
   }
 
   @Mutation(() => UserType)
-  @UseGuards(JwtAuthGuard)
   async updateProfile(
     @CurrentUser() currentUser: User,
     @Args("input") updateProfileInput: UpdateProfileInput,
@@ -55,7 +53,6 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(JwtAuthGuard)
   async changePassword(
     @CurrentUser() currentUser: User,
     @Args("input") changePasswordInput: ChangePasswordInput,
@@ -100,7 +97,6 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(JwtAuthGuard)
   async deleteAccount(@CurrentUser() currentUser: User): Promise<boolean> {
     // 모든 리프레시 토큰 취소
     await this.tokenService.revokeAllUserTokens(currentUser.id);
