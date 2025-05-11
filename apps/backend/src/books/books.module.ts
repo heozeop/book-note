@@ -1,7 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { BookSearchModule } from './book-search/book-search.module';
 import { BookController } from "./controllers/book.controller";
 import { CollectionController } from "./controllers/collection.controller";
 import { BookTagController, TagController } from "./controllers/tag.controller";
@@ -20,6 +19,7 @@ import { Stroke } from "./entities/stroke.entity";
 import { Tag } from "./entities/tag.entity";
 import { Thought } from "./entities/thought.entity";
 import { UserBook } from "./entities/user-book.entity";
+import { BookSearchModule } from './modules/book-search/book-search.module';
 import { BookCollectionRepository } from "./repositories/book-collection.repository";
 import { BookTagRepository } from "./repositories/book-tag.repository";
 import { BookRepository } from "./repositories/book.repository";

@@ -6,7 +6,7 @@ import { UpdateBookDto } from "../dtos/update-book.dto";
 import { Book } from "../entities/book.entity";
 import { BookStatus } from "../entities/reading-status.entity";
 import { UserBook } from "../entities/user-book.entity";
-import { BookItem, BookSearchResponse, IBookSearchService } from '../interfaces/book-search.interface';
+import { BookItem, BookSearchResponse, IBookSearchService } from '../modules/book-search/interfaces/book-search.interface';
 import { BookTagRepository } from "../repositories/book-tag.repository";
 import { BookRepository } from "../repositories/book.repository";
 import { TagRepository } from "../repositories/tag.repository";

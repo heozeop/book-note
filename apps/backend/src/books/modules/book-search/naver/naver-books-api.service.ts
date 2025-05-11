@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { BookItem, BookSearchParams, BookSearchResponse, IBookSearchService } from '../../interfaces/book-search.interface';
+import { BookItem, BookSearchParams, BookSearchResponse, IBookSearchService } from '../interfaces/book-search.interface';
 import { NaverBookItem, NaverBookSearchParams, NaverBookSearchResponse } from './naver-books-api.types';
 
 /**

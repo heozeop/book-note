@@ -11,7 +11,7 @@ import { UpdateBookInput } from "../graphql/inputs/update-book.input";
 import { BookResponseType } from "../graphql/types/book-response.type";
 import { BookSearchResponseType } from "../graphql/types/book-search-response.type";
 import { UserBookResponseType } from "../graphql/types/user-book-response.type";
-import { BookSearchResponse, IBookSearchService } from "../interfaces/book-search.interface";
+import { BookSearchResponse, IBookSearchService } from "../modules/book-search/interfaces/book-search.interface";
 import { BookService } from "../services/book.service";
 
 @Resolver(() => UserBookResponseType)
