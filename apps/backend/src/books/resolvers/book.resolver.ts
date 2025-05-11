@@ -3,50 +3,60 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { User } from "../../auth/entities/user.entity";
 import { GqlAuthGuard } from "../../auth/guards/gql-auth.guard";
-import { Book, BookStatus } from "../entities/book.entity";
+import { Book } from "../entities/book.entity";
+import { BookStatus } from "../graphql/types/book-status.enum";
+import { BookType } from "../graphql/types/book.type";
 import { CreateBookInput } from "../inputs/create-book.input";
 import { UpdateBookInput } from "../inputs/update-book.input";
 import { BookService } from "../services/book.service";
 
-@Resolver(() => Book)
+@Resolver(() => BookType)
 @UseGuards(GqlAuthGuard)
 export class BookResolver {
   constructor(private readonly bookService: BookService) {}
 
-  @Query(() => [Book], { name: "books" })
+  @Query(() => [BookType], { name: "books" })
   async getBooks(
     @CurrentUser() user: User,
     @Args("status", { nullable: true }) status?: BookStatus,
-  ): Promise<Book[]> {
+  ): Promise<BookType[]> {
+    let books: Book[];
+    
     if (status) {
-      return this.bookService.findBooksByStatus(status, user.id);
+      books = await this.bookService.findBooksByStatus(status, user.id);
+    } else {
+      books = await this.bookService.findAllBooks(user.id);
     }
-    return this.bookService.findAllBooks(user.id);
+    
+    return books.map(book => this.mapBookToType(book));
   }
 
-  @Query(() => Book, { name: "book" })
+  @Query(() => BookType, { name: "book" })
   async getBook(
     @Args("id") id: string,
     @CurrentUser() user: User,
-  ): Promise<Book> {
-    return this.bookService.findBookById(id, user.id);
+  ): Promise<BookType> {
+    const book = await this.bookService.findBookById(id, user.id);
+    return this.mapBookToType(book);
   }
 
-  @Mutation(() => Book)
+  @Mutation(() => BookType)
   async createBook(
     @Args("input") createBookInput: CreateBookInput,
     @CurrentUser() user: User,
-  ): Promise<Book> {
-    return this.bookService.createBook(createBookInput, user);
+  ): Promise<BookType> {
+    const book = await this.bookService.createBook(createBookInput, user);
+    return this.mapBookToType(book);
   }
 
-  @Mutation(() => Book)
+  @Mutation(() => BookType)
   async updateBook(
     @Args("id") id: string,
     @Args("input") updateBookInput: UpdateBookInput,
     @CurrentUser() user: User,
-  ): Promise<Book> {
-    return this.bookService.updateBook(id, updateBookInput, user.id);
+  ): Promise<BookType> {
+    const book = await this.bookService.updateBook(id, updateBookInput, user.id);
+    return this.mapBookToType(book);
   }
 
   @Mutation(() => Boolean)
@@ -57,12 +67,39 @@ export class BookResolver {
     return this.bookService.deleteBook(id, user.id);
   }
 
-  @Mutation(() => Book)
+  @Mutation(() => BookType)
   async updateBookStatus(
     @Args("id") id: string,
     @Args("status") status: BookStatus,
     @CurrentUser() user: User,
-  ): Promise<Book> {
-    return this.bookService.updateBookStatus(id, status, user.id);
+  ): Promise<BookType> {
+    const book = await this.bookService.updateBookStatus(id, status, user.id);
+    return this.mapBookToType(book);
+  }
+  
+  /**
+   * Maps a Book entity to a BookType for GraphQL
+   */
+  private mapBookToType(book: Book): BookType {
+    return {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      isbn: book.isbn,
+      coverImage: book.coverImage,
+      description: book.description,
+      publishedDate: book.publishedDate,
+      publisher: book.publisher,
+      status: book.status,
+      currentPage: book.currentPage,
+      totalPages: book.totalPages,
+      startedAt: book.startedAt,
+      finishedAt: book.finishedAt,
+      metadata: book.metadata ? JSON.stringify(book.metadata) : null,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt,
+      owner: { id: book.owner.id } as any, // Will be resolved by UserResolver if needed
+      notes: book.notes?.getItems().map(note => ({ id: note.id })) as any // Will be resolved by NoteResolver if needed
+    };
   }
 }

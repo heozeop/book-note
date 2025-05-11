@@ -343,6 +343,7 @@ stateDiagram-v2
 |             | "내 서재에 책을 폴더/컬렉션으로 정리하고 싶다"   | • 사용자 정의 컬렉션<br>• 한 책의 다중 컬렉션 소속<br>• 컬렉션 색상 커스텀      | 낮음      |     |
 | **페이지 노트**  | "p.34 구절 + 내 생각을 남기고 싶다"       | • [구절, 생각] 세트 N개<br>• 꼬리 생각 트리<br>• **Markdown(텍스트 전용)**      | 높음      | ⬤   |
 |             | "내 생각에 이어지는 새로운 생각을 트리로 기록하고 싶다" | • 최대 3단계 중첩<br>• 시각적 들여쓰기<br>• 접기/펼치기 기능                  | 높음      | ⬤   |
+|             | "모바일에서 펜으로 필기하여 생각을 기록하고 싶다" | • 스트로크 데이터 저장<br>• 웹과 모바일 호환<br>• 필기 스타일 유지             | 높음      | ⬤   |
 |             | "챕터 기반으로 노트를 구성하고 싶다"         | • 페이지 번호 대신 챕터명<br>• 챕터 내 섹션 구분<br>• 자동 목차 추출            | 중간      |     |
 |             | "노트에 태그를 추가하고 싶다"             | • 다중 태그 지원<br>• 자동 완성<br>• 태그 관리 인터페이스                     | 중간      |     |
 | **독서 상태**   | "읽는 중·완독·재독 횟수를 관리하고 싶다"      | • 상태 enum<br>• n회독 자동 증가·수정<br>• 상태 변경 히스토리                | 높음      | ⬤   |
@@ -532,7 +533,8 @@ erDiagram
 | pageNoteId     | UUID         | 아니오     | 페이지 노트 ID            | FK → PageNote.id         |
 | quoteId        | UUID         | 예        | 관련 인용구 ID            | FK → Quote.id            |
 | parentThoughtId| UUID         | 예        | 부모 생각 ID (꼬리 생각용)   | FK → Thought.id          |
-| text           | TEXT         | 아니오     | 생각 텍스트               | 최소 1자                  |
+| text           | TEXT         | 예        | 생각 텍스트               | 최소 1자                  |
+| inputType      | VARCHAR(10)  | 아니오     | 입력 유형                | 'TEXT' or 'STROKE'       |
 | orderIndex     | INT          | 아니오     | 정렬 순서                 | >= 0                     |
 | depth          | INT          | 아니오     | 계층 깊이 (0=루트)         | 0-3                      |
 | createdAt      | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
@@ -614,6 +616,17 @@ erDiagram
 | duration      | INT          | 예        | 독서 시간(분)             | > 0                      |
 | notes         | TEXT         | 예        | 메모                     |                          |
 | createdAt     | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
+
+#### 7.2.14 Stroke
+
+| 필드명           | 타입         | Null 허용 | 설명                    | 제약조건                   |
+| -------------- | ------------ | -------- | ----------------------- | ------------------------ |
+| id             | UUID         | 아니오     | 스트로크 고유 식별자        | PK                       |
+| thoughtId      | UUID         | 아니오     | 연결된 생각 ID            | FK → Thought.id          |
+| strokeData     | TEXT         | 아니오     | 스트로크 데이터 (JSON)      | 유효한 JSON 형식           |
+| sourceType     | VARCHAR(10)  | 아니오     | 입력 소스 타입             | 'MOBILE' or 'WEB'        |
+| createdAt      | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
+| updatedAt      | TIMESTAMP    | 아니오     | 마지막 업데이트 시간         | ON UPDATE CURRENT_TIMESTAMP |
 
 ---
 
@@ -1033,6 +1046,7 @@ flowchart TB
 | UI 컴포넌트    | Material 3 + 커스텀 위젯       | 모던 디자인, 커스터마이징 용이              |
 | 네비게이션     | Go Router                    | 선언적 라우팅, 딥 링크 지원                 |
 | 오프라인 지원   | Hive + SQLite               | 빠른 로컬 데이터베이스, 트랜잭션 지원         |
+| 필기 입력      | Flutter Canvas + Skia       | 자연스러운 필기 경험, 스트로크 데이터 저장     |
 
 ### 11.2 Flutter 구현 전략
 
@@ -1043,6 +1057,7 @@ flowchart TB
 | 테스트         | Unit + Widget + Integration      | 다층적 테스트 커버리지                    |
 | 빌드 프로세스    | Flutter CI/CD (GitHub Actions)   | 자동화된 빌드, 테스트, 배포                |
 | 디자인 시스템    | 공통 디자인 토큰                   | 웹과 모바일 간 일관된 브랜딩               |
+| 필기 입력 처리   | 커스텀 스트로크 모듈                | 압력 감지, 스트로크 정밀도 최적화          |
 
 ### 11.3 네이티브 기능 통합
 

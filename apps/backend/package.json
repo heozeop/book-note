@@ -22,10 +22,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:e2e:auth": "ts-node -r tsconfig-paths/register test/e2e/auth/run-auth-e2e.ts",
-    "test:e2e:auth:rest": "jest --config ./test/jest-e2e.json test/e2e/auth/auth.e2e-spec.ts",
-    "test:e2e:auth:graphql": "jest --config ./test/jest-e2e.json test/e2e/auth/auth-graphql.e2e-spec.ts",
-    "test:e2e:auth:guards": "jest --config ./test/jest-e2e.json test/e2e/auth/auth-guards.e2e-spec.ts"
+    "test:e2e:auth": "jest --config ./test/jest-e2e.json test/e2e/auth"
   },
   "dependencies": {
     "@mikro-orm/core": "^6.4.13",

@@ -1,3 +1,4 @@
+import { BookStatus } from "@/books/entities/book.entity";
 import { Field, InputType, Int } from "@nestjs/graphql";
 import {
   IsEnum,
@@ -8,8 +9,6 @@ import {
   MaxLength,
   Min,
 } from "class-validator";
-import { BookStatus } from "../entities/book.entity";
-
 @InputType()
 export class CreateBookInput {
   @Field()
