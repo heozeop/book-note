@@ -1,11 +1,16 @@
-import { Body, Controller, Get, Headers, Ip, Param, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Ip, Param, Post, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
+import { CurrentUser } from '../decorators/current-user.decorator';
+import { RefreshToken } from '../decorators/refresh-token.decorator';
 import { AuthResponseDto } from '../dtos/auth-response.dto';
-import { AuthTokenDto } from '../dtos/auth-token.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { RegisterUserDto } from '../dtos/register-user.dto';
 import { UserResponseDto } from '../dtos/user-response.dto';
+import { User } from '../entities/user.entity';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AuthService } from '../services/auth.service';
+import { CookieService } from '../services/cookie.service';
 import { PasswordService } from '../services/password.service';
 import { TokenService } from '../services/token.service';
 
@@ -15,7 +20,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly passwordService: PasswordService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    private readonly cookieService: CookieService
   ) {}
 
   @Post('register')
@@ -36,23 +42,24 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Headers('user-agent') userAgent: string,
     @Ip() ipAddress: string,
+    @Res({ passthrough: true }) response: Response,
   ) {
     const { accessToken, user } = await this.authService.login(loginDto);
     
-    // 사용자 전체 정보 조회
-    const fullUser = await this.authService.findUserById(user.id as string);
-    if (!fullUser) {
-      throw new Error('User not found');
-    }
-    
-    // 리프레시 토큰 생성
     const { token: refreshToken } = await this.tokenService.createRefreshToken(
-      fullUser,
+      user as User,
       userAgent,
       ipAddress,
     );
     
-    return AuthResponseDto.create(fullUser, accessToken, refreshToken);
+    // Set HTTP-only cookies for both tokens
+    this.cookieService.setAccessTokenCookie(response, accessToken);
+    this.cookieService.setRefreshTokenCookie(response, refreshToken);
+    
+    // Return response without including tokens in body
+    const authResponse = AuthResponseDto.create(user as User);
+    
+    return authResponse;
   }
 
   @Post('refresh-token')
@@ -60,18 +67,22 @@ export class AuthController {
   @ApiResponse({ status: 200, description: '토큰 갱신 성공' })
   @ApiResponse({ status: 401, description: '유효하지 않은 리프레시 토큰' })
   async refreshToken(
-    @Body('refreshToken') refreshToken: string,
+    @RefreshToken() refreshToken: string,
     @Headers('user-agent') userAgent: string,
     @Ip() ipAddress: string,
-  ): Promise<AuthTokenDto> {
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('리프레시 토큰이 제공되지 않았습니다');
+    }
+    
     // 리프레시 토큰 검증
     const validToken = await this.tokenService.verifyRefreshToken(refreshToken);
     if (!validToken) {
       throw new UnauthorizedException('유효하지 않은 리프레시 토큰');
     }
 
-    // 기존 토큰 취소
-    await this.tokenService.revokeRefreshToken(refreshToken);
+    await this.tokenService.revokeAllUserTokens(validToken.user.id);
 
     // 사용자 조회
     const user = await this.authService.findUserById(validToken.user.id);
@@ -91,15 +102,44 @@ export class AuthController {
       userAgent,
       ipAddress,
     );
-
-    // 응답 생성
-    const tokenDto = new AuthTokenDto();
-    tokenDto.accessToken = accessToken;
-    tokenDto.refreshToken = newRefreshToken;
-    tokenDto.expiresIn = 3600; // 1시간 (초 단위)
-    tokenDto.tokenType = 'Bearer';
     
-    return tokenDto;
+    // Set HTTP-only cookies for both tokens
+    this.cookieService.setAccessTokenCookie(response, accessToken);
+    this.cookieService.setRefreshTokenCookie(response, newRefreshToken);
+
+    // 응답 생성 (토큰을 쿠키로만 반환)
+    return { 
+      success: true, 
+      message: '토큰이 성공적으로 갱신되었습니다.' 
+    };
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '로그아웃' })
+  @ApiResponse({ status: 200, description: '로그아웃 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async logout(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) response?: Response,
+  ) {
+    await this.tokenService.revokeAllUserTokens(user.id);
+    
+    // Clear all authentication cookies
+    if (response) {
+      this.cookieService.clearAllAuthCookies(response);
+    }
+    
+    return { success: true, message: '로그아웃 되었습니다.' };
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '현재 사용자 정보 조회' })
+  @ApiResponse({ status: 200, description: '사용자 정보 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async getCurrentUser(@CurrentUser() user: User) {
+    return UserResponseDto.fromEntity(user);
   }
 
   @Get('password-strength/:password')

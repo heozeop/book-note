@@ -12,5 +12,9 @@
     "turbo": "^2.5.3"
   },
   "packageManager": "pnpm@8.15.6",
-  "name": "with-vite-react"
+  "name": "with-vite-react",
+  "dependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "cookie-parser": "^1.4.7"
+  }
 }

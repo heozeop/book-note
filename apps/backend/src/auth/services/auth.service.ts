@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from '../dtos/login.dto';
 import { RegisterUserDto } from '../dtos/register-user.dto';
@@ -12,6 +13,7 @@ export class AuthService {
     private readonly userRepository: UserRepository,
     private readonly jwtService: JwtService,
     private readonly passwordService: PasswordService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -90,10 +92,13 @@ export class AuthService {
     }
 
     // JWT 토큰 생성
+    const now = Math.floor(Date.now() / 1000);
     const payload = { 
       sub: user.id, 
       email: user.email,
-      role: user.role 
+      role: user.role,
+      iat: now,
+      exp: now + this.configService.get<number>('JWT_EXPIRES_IN', 3600), // 1 hour
     };
     
     const accessToken = this.jwtService.sign(payload);

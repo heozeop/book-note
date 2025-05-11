@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AuthTokenDto {
   @ApiProperty({
@@ -7,8 +7,8 @@ export class AuthTokenDto {
   })
   accessToken: string;
 
-  @ApiProperty({
-    description: '리프레시 토큰',
+  @ApiPropertyOptional({
+    description: '리프레시 토큰 (HTTP-only 쿠키로 설정됨)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   refreshToken?: string;

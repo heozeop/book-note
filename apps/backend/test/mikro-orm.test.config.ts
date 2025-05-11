@@ -4,7 +4,7 @@ import { RefreshToken } from '../src/auth/entities/refresh-token.entity';
 import { User } from '../src/auth/entities/user.entity';
 
 // Test-specific Mikro-ORM configuration
-const testConfig: Options = ({
+const testConfig: Options = {
   driver: SqliteDriver,
   dbName: ':memory:',
   entities: [User, RefreshToken],
@@ -22,6 +22,6 @@ const testConfig: Options = ({
     disableForeignKeys: true,
     createForeignKeyConstraints: false,
   },
-}); 
+}; 
 
 export default testConfig;

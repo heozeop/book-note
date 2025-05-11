@@ -1,7 +1,14 @@
+import { EntityManager } from '@mikro-orm/core';
+import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../../common/repositories/base.repository';
 import { Book, BookStatus } from '../entities/book.entity';
 
+@Injectable()
 export class BookRepository extends BaseRepository<Book> {
+  constructor(protected readonly em: EntityManager) {
+    super(em, 'Book');
+  }
+
   /**
    * 사용자 ID로 책을 찾습니다.
    * @param ownerId 소유자 ID

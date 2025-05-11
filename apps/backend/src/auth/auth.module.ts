@@ -6,11 +6,13 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './controllers/auth.controller';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 import { UserRepository } from './repositories/user.repository';
 import { AuthResolver } from './resolvers/auth.resolver';
 import { UserResolver } from './resolvers/user.resolver';
 import { AuthService } from './services/auth.service';
+import { CookieService } from './services/cookie.service';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -48,7 +50,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AuthService,
     PasswordService,
     TokenService,
+    CookieService,
     JwtStrategy,
+    JwtAuthGuard,
     UserRepository,
     RefreshTokenRepository,
     AuthResolver,
@@ -58,8 +62,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AuthService,
     PasswordService,
     TokenService,
+    CookieService,
     JwtModule,
     PassportModule,
+    JwtAuthGuard,
   ],
 })
 export class AuthModule {} 

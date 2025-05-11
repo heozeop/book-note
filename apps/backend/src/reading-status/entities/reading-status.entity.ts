@@ -1,7 +1,7 @@
-import { User } from '@/auth/entities/user.entity';
-import { Book } from '@/books/entities/book.entity';
 import { Entity, Enum, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
 import { v4 } from 'uuid';
+import { User } from '../../auth/entities/user.entity';
+import { Book } from '../../books/entities/book.entity';
 
 export enum ReadingState {
   PLANNING = 'planning',

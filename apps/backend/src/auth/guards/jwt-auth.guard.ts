@@ -1,6 +1,7 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { AuthGuard } from '@nestjs/passport';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -9,7 +10,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    * @param context 실행 컨텍스트
    * @returns 검증 결과
    */
-  canActivate(context: ExecutionContext) {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
     // JWT 전략의 validate 메소드 호출
     return super.canActivate(context);
   }
@@ -35,6 +36,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // HTTP와 GraphQL 컨텍스트 모두 지원
     const ctx = GqlExecutionContext.create(context);
     // GraphQL이면 ctx.getContext().req 반환, HTTP면 context.switchToHttp().getRequest() 반환
-    return ctx.getContext()?.req || context.switchToHttp().getRequest();
+    const request = ctx.getContext()?.req || context.switchToHttp().getRequest();
+    
+    // Check cookies first for accessToken, if not found, continue with default behavior
+    if (request.cookies?.accessToken && !request.headers.authorization) {
+      // Use the cookie token as Bearer token
+      request.headers.authorization = `Bearer ${request.cookies.accessToken}`;
+    }
+    
+    return request;
   }
 } 

@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -16,8 +17,14 @@ async function bootstrap() {
     }),
   );
   
+  // Cookie Parser 미들웨어
+  app.use(cookieParser());
+  
   // CORS 설정
-  app.enableCors();
+  app.enableCors({
+    origin: true, // or specify your client domains
+    credentials: true, // important for cookies
+  });
   
   // Swagger 설정
   const config = new DocumentBuilder()
@@ -25,6 +32,7 @@ async function bootstrap() {
     .setDescription('BookNote 애플리케이션의 API 문서')
     .setVersion('1.0')
     .addBearerAuth()
+    .addCookieAuth('accessToken')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

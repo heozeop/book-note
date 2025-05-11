@@ -8,11 +8,11 @@ import { User } from '../../../src/auth/entities/user.entity';
 import { RefreshTokenRepository } from '../../../src/auth/repositories/refresh-token.repository';
 import { UserRepository } from '../../../src/auth/repositories/user.repository';
 import { AuthService } from '../../../src/auth/services/auth.service';
+import { CookieService } from '../../../src/auth/services/cookie.service';
 import { PasswordService } from '../../../src/auth/services/password.service';
 import { TokenService } from '../../../src/auth/services/token.service';
 import { JwtStrategy } from '../../../src/auth/strategies/jwt.strategy';
 import testOrmConfig from '../../../test/mikro-orm.test.config';
-
 /**
  * 인증 모듈 테스트를 위한 테스트 모듈입니다.
  * SQLite 인메모리 데이터베이스를 사용합니다.
@@ -64,6 +64,7 @@ import testOrmConfig from '../../../test/mikro-orm.test.config';
     JwtStrategy,
     UserRepository,
     RefreshTokenRepository,
+    CookieService,
   ],
   exports: [
     AuthService,
@@ -71,6 +72,7 @@ import testOrmConfig from '../../../test/mikro-orm.test.config';
     TokenService,
     JwtStrategy,
     JwtModule,
+    CookieService,
     PassportModule,
     MikroOrmModule,
   ],
