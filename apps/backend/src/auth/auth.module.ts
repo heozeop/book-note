@@ -16,18 +16,8 @@ import { CookieService } from "./services/cookie.service";
 import { PasswordService } from "./services/password.service";
 import { TokenService } from "./services/token.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
-
-// Entities will be imported when implemented
-// import { User } from './entities/user.entity';
-// import { RefreshToken } from './entities/refresh-token.entity';
-
-// Controllers, services, etc. will be imported when implemented
-// import { AuthController } from './controllers/auth.controller';
-// import { AuthResolver } from './resolvers/auth.resolver';
-// import { AuthService } from './services/auth.service';
-// import { JwtStrategy } from './strategies/jwt.strategy';
-// import { TokenService } from './services/token.service';
-
+// Import this to ensure the UserRole enum is registered with GraphQL
+import "./graphql/types/user-role.enum";
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: "jwt" }),

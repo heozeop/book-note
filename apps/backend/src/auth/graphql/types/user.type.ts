@@ -1,7 +1,7 @@
 import { User, UserRole } from "@/auth/entities/user.entity";
 import { Field, ObjectType } from "@nestjs/graphql";
 
-@ObjectType("User")
+@ObjectType('User')
 export class UserType {
   @Field()
   id: string;

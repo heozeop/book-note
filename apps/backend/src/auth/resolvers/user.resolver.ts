@@ -1,14 +1,14 @@
+import { CurrentUser } from "@/auth/decorators/current-user.decorator";
+import { User } from "@/auth/entities/user.entity";
+import { ChangePasswordInput } from "@/auth/graphql/inputs/change-password.input";
+import { UpdateProfileInput } from "@/auth/graphql/inputs/update-profile.input";
+import { UserType } from "@/auth/graphql/types/user.type";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { AuthService } from "@/auth/services/auth.service";
+import { PasswordService } from "@/auth/services/password.service";
+import { TokenService } from "@/auth/services/token.service";
 import { BadRequestException, UseGuards } from "@nestjs/common";
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
-import { CurrentUser } from "../decorators/current-user.decorator";
-import { User } from "../entities/user.entity";
-import { ChangePasswordInput } from "../graphql/inputs/change-password.input";
-import { UpdateProfileInput } from "../graphql/inputs/update-profile.input";
-import { UserType } from "../graphql/types/user.type";
-import { JwtAuthGuard } from "../guards/jwt-auth.guard";
-import { AuthService } from "../services/auth.service";
-import { PasswordService } from "../services/password.service";
-import { TokenService } from "../services/token.service";
 
 @Resolver(() => UserType)
 export class UserResolver {

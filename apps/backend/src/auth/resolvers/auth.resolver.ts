@@ -1,10 +1,10 @@
+import { CurrentUser } from "@/auth/decorators/current-user.decorator";
+import { User } from "@/auth/entities/user.entity";
+import { UserType } from "@/auth/graphql/types/user.type";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { AuthService } from "@/auth/services/auth.service";
 import { UseGuards } from "@nestjs/common";
 import { Query, Resolver } from "@nestjs/graphql";
-import { CurrentUser } from "../decorators/current-user.decorator";
-import { User } from "../entities/user.entity";
-import { UserType } from "../graphql/types/user.type";
-import { JwtAuthGuard } from "../guards/jwt-auth.guard";
-import { AuthService } from "../services/auth.service";
 
 @Resolver(() => UserType)
 export class AuthResolver {

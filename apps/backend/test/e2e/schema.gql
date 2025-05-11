@@ -2,13 +2,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type AuthTokens {
-  accessToken: String!
-  expiresIn: Float!
-  refreshToken: String
-  tokenType: String!
-}
-
 input ChangePasswordInput {
   currentPassword: String!
   newPassword: String!
@@ -22,13 +15,13 @@ scalar DateTime
 type Mutation {
   changePassword(input: ChangePasswordInput!): Boolean!
   deleteAccount: Boolean!
-  updateProfile(input: UpdateProfileInput!): UserType!
+  updateProfile(input: UpdateProfileInput!): User!
 }
 
 type Query {
-  me: UserType!
-  user(id: String!): UserType!
-  users: [UserType!]!
+  me: User!
+  user(id: String!): User!
+  users: [User!]!
 }
 
 input UpdateProfileInput {
@@ -37,13 +30,7 @@ input UpdateProfileInput {
   timezone: String
 }
 
-"""The role of the user"""
-enum UserRole {
-  ADMIN
-  USER
-}
-
-type UserType {
+type User {
   createdAt: DateTime!
   displayName: String!
   email: String!
@@ -51,4 +38,10 @@ type UserType {
   isVerified: Boolean!
   profileImage: String
   role: UserRole!
+}
+
+"""The role of the user"""
+enum UserRole {
+  ADMIN
+  USER
 }
