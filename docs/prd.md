@@ -338,7 +338,8 @@ stateDiagram-v2
 
 | Epic        | User Story                       | 주요 AC                                                    | 우선순위   | MVP |
 | ----------- | -------------------------------- | --------------------------------------------------------- | -------- | --- |
-| **책 등록**    | "ISBN으로 책 정보를 자동으로 불러오고 싶다"     | • Naver Book API 검색<br>• 중복 ISBN 차단<br>• 구매 정보 옵션<br>• 수동 입력 폴백   | 높음      | ⬤   |
+| **책 등록**    | "ISBN으로 책 정보를 Naver API에서 자동으로 불러오고 싶다"     | • Naver Books Open API 연동<br>• ISBN-10/13 검색<br>• 표지 이미지, 제목, 저자 등 자동 추출<br>• 수동 입력 폴백   | 높음      | ⬤   |
+|             | "책 제목으로 검색하여 Naver 검색 결과에서 선택하고 싶다"           | • Naver 도서 검색 API 연동<br>• 검색 결과 목록 표시<br>• 결과 중 선택 시 상세 정보 자동 추출                | 높음      | ⬤   |
 |             | "책 표지를 촬영하여 등록하고 싶다"           | • 표지 이미지 인식<br>• AI 도서 정보 검색<br>• 결과 확인 및 수정                | 중간      |     |
 |             | "내 서재에 책을 폴더/컬렉션으로 정리하고 싶다"   | • 사용자 정의 컬렉션<br>• 한 책의 다중 컬렉션 소속<br>• 컬렉션 색상 커스텀      | 낮음      |     |
 | **페이지 노트**  | "p.34 구절 + 내 생각을 남기고 싶다"       | • [구절, 생각] 세트 N개<br>• 꼬리 생각 트리<br>• **Markdown(텍스트 전용)**      | 높음      | ⬤   |
@@ -427,16 +428,19 @@ stateDiagram-v2
 
 ```mermaid
 erDiagram
-    User ||--o{ Book : "소유"
-    User ||--o{ ReadingStatus : "관리"
-    User ||--o{ PageNote : "작성"
+    User ||--o{ UserBook : "소유"
+    Book }o--o{ UserBook : "등록됨"
+    UserBook ||--o{ ReadingStatus : "관리"
+    UserBook ||--o{ PageNote : "포함"
+    UserBook }o--o{ Collection : "속함"
+    
+    User ||--o{ RefreshToken : "보유"
     User ||--o{ Collection : "생성"
     User ||--o{ Reaction : "남김"
-    User ||--o{ RefreshToken : "보유"
     
-    Book ||--o{ ReadingStatus : "상태"
-    Book ||--o{ PageNote : "포함"
-    Book }o--o{ Collection : "속함"
+    Book ||--o| Publisher : "출판사"
+    Book }o--o{ Author : "저자"
+    Book }o--o{ Category : "분류"
     
     PageNote ||--o{ Quote : "포함"
     PageNote ||--o{ Thought : "포함"
@@ -467,31 +471,45 @@ erDiagram
 
 #### 7.2.2 Book
 
-| 필드명         | 타입         | Null 허용 | 설명                    | 제약조건                   |
-| ------------ | ------------ | -------- | ----------------------- | ------------------------ |
-| id           | UUID         | 아니오     | 책 고유 식별자            | PK                       |
-| userId       | UUID         | 아니오     | 소유자 ID                | FK → User.id             |
-| isbn         | VARCHAR(20)  | 예        | ISBN-10 또는 ISBN-13     | ISBN 형식 검증             |
-| title        | VARCHAR(255) | 아니오     | 책 제목                  | 최소 1자                  |
-| author       | VARCHAR(255) | 아니오     | 저자명                   | 최소 1자                  |
-| publisher    | VARCHAR(100) | 예        | 출판사                   |                          |
-| coverUrl     | VARCHAR(255) | 예        | 표지 이미지 URL           | URL 형식                  |
-| pageCount    | INT          | 예        | 총 페이지 수              | > 0                      |
-| publishedAt  | DATE         | 예        | 출판일                   |                          |
-| description  | TEXT         | 예        | 책 설명                  |                          |
-| price        | DECIMAL(10,2)| 예        | 구매 가격                |                          |
-| boughtAt     | DATE         | 예        | 구매일                   |                          |
-| language     | VARCHAR(10)  | 예        | 언어 코드                | ISO 639-1               |
-| createdAt    | TIMESTAMP    | 아니오     | 등록 시간                | DEFAULT CURRENT_TIMESTAMP |
-| updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간        | ON UPDATE CURRENT_TIMESTAMP |
+| 필드명         | 타입         | Null 허용 | 설명                              | 제약조건                   |
+| ------------ | ------------ | -------- | --------------------------------- | ------------------------ |
+| id           | UUID         | 아니오     | 책 고유 식별자                      | PK                       |
+| isbn         | VARCHAR(20)  | 예        | ISBN-10 또는 ISBN-13              | ISBN 형식 검증             |
+| title        | VARCHAR(255) | 아니오     | 책 제목                            | 최소 1자                  |
+| subTitle     | VARCHAR(255) | 예        | 부제목                             |                          |
+| author       | VARCHAR(255) | 아니오     | 저자명                             | 최소 1자                  |
+| publisher    | VARCHAR(100) | 예        | 출판사                             |                          |
+| coverUrl     | VARCHAR(255) | 예        | 표지 이미지 URL                     | URL 형식                  |
+| pageCount    | INT          | 예        | 총 페이지 수                        | > 0                      |
+| publishedAt  | DATE         | 예        | 출판일                             |                          |
+| description  | TEXT         | 예        | 책 설명                            |                          |
+| price        | DECIMAL(10,2)| 예        | 판매 가격                          |                          |
+| discount     | DECIMAL(10,2)| 예        | 할인 가격                          |                          |
+| language     | VARCHAR(10)  | 예        | 언어 코드                          | ISO 639-1               |
+| naverBookId  | VARCHAR(50)  | 예        | Naver 도서 API 식별자               | UNIQUE                   |
+| createdAt    | TIMESTAMP    | 아니오     | 등록 시간                           | DEFAULT CURRENT_TIMESTAMP |
+| updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간                   | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.3 ReadingStatus
+#### 7.2.3 UserBook
+
+| 필드명         | 타입         | Null 허용 | 설명                              | 제약조건                   |
+| ------------ | ------------ | -------- | --------------------------------- | ------------------------ |
+| id           | UUID         | 아니오     | 연결 고유 식별자                      | PK                       |
+| userId       | UUID         | 아니오     | 사용자 ID                           | FK → User.id             |
+| bookId       | UUID         | 아니오     | 책 ID                              | FK → Book.id             |
+| isPrivate    | BOOLEAN      | 아니오     | 공개 여부                            | DEFAULT TRUE             |
+| rating       | DECIMAL(3,1) | 예        | 사용자 평점 (1.0-5.0)                | 1.0 ≤ x ≤ 5.0           |
+| boughtAt     | DATE         | 예        | 구매일                              |                          |
+| notes        | TEXT         | 예        | 개인 메모                            |                          |
+| createdAt    | TIMESTAMP    | 아니오     | 연결 생성 시간                        | DEFAULT CURRENT_TIMESTAMP |
+| updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간                    | ON UPDATE CURRENT_TIMESTAMP |
+
+#### 7.2.4 ReadingStatus
 
 | 필드명         | 타입         | Null 허용 | 설명                   | 제약조건                   |
 | ------------ | ------------ | -------- | ---------------------- | ------------------------ |
 | id           | UUID         | 아니오     | 상태 고유 식별자          | PK                       |
-| userId       | UUID         | 아니오     | 사용자 ID               | FK → User.id             |
-| bookId       | UUID         | 아니오     | 책 ID                  | FK → Book.id             |
+| userBookId   | UUID         | 아니오     | 사용자 책 ID             | FK → UserBook.id         |
 | status       | ENUM         | 아니오     | 독서 상태                | NOT_STARTED, READING, COMPLETED, ABANDONED |
 | currentPage  | INT          | 예        | 현재 페이지              | >= 0, <= Book.pageCount  |
 | rereadCount  | INT          | 아니오     | 재독 횟수                | >= 0, DEFAULT 0         |
@@ -500,13 +518,12 @@ erDiagram
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간        | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.4 PageNote
+#### 7.2.5 PageNote
 
 | 필드명         | 타입         | Null 허용 | 설명                   | 제약조건                   |
 | ------------ | ------------ | -------- | ---------------------- | ------------------------ |
 | id           | UUID         | 아니오     | 노트 고유 식별자          | PK                       |
-| userId       | UUID         | 아니오     | 사용자 ID               | FK → User.id             |
-| bookId       | UUID         | 아니오     | 책 ID                  | FK → Book.id             |
+| userBookId   | UUID         | 아니오     | 사용자 책 ID             | FK → UserBook.id         |
 | page         | INT          | 예        | 페이지 번호              | >= 0, NULL if chapter only |
 | chapter      | VARCHAR(100) | 예        | 챕터명                  | NULL if page only        |
 | title        | VARCHAR(255) | 예        | 노트 제목                |                          |
@@ -514,7 +531,7 @@ erDiagram
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간        | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.5 Quote
+#### 7.2.6 Quote
 
 | 필드명         | 타입         | Null 허용 | 설명                   | 제약조건                   |
 | ------------ | ------------ | -------- | ---------------------- | ------------------------ |
@@ -525,7 +542,7 @@ erDiagram
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간        | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.6 Thought
+#### 7.2.7 Thought
 
 | 필드명           | 타입         | Null 허용 | 설명                    | 제약조건                   |
 | -------------- | ------------ | -------- | ----------------------- | ------------------------ |
@@ -540,7 +557,7 @@ erDiagram
 | createdAt      | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt      | TIMESTAMP    | 아니오     | 마지막 업데이트 시간         | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.7 Collection
+#### 7.2.8 Collection
 
 | 필드명         | 타입         | Null 허용 | 설명                    | 제약조건                   |
 | ------------ | ------------ | -------- | ----------------------- | ------------------------ |
@@ -552,15 +569,6 @@ erDiagram
 | isDefault    | BOOLEAN      | 아니오     | 기본 컬렉션 여부           | DEFAULT FALSE            |
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간         | ON UPDATE CURRENT_TIMESTAMP |
-
-#### 7.2.8 BookCollection
-
-| 필드명         | 타입         | Null 허용 | 설명                    | 제약조건                   |
-| ------------ | ------------ | -------- | ----------------------- | ------------------------ |
-| id           | UUID         | 아니오     | 고유 식별자               | PK                       |
-| bookId       | UUID         | 아니오     | 책 ID                   | FK → Book.id             |
-| collectionId | UUID         | 아니오     | 컬렉션 ID                | FK → Collection.id       |
-| addedAt      | TIMESTAMP    | 아니오     | 추가 시간                 | DEFAULT CURRENT_TIMESTAMP |
 
 #### 7.2.9 Tag
 
@@ -581,7 +589,16 @@ erDiagram
 | tagId        | UUID         | 아니오     | 태그 ID                  | FK → Tag.id              |
 | addedAt      | TIMESTAMP    | 아니오     | 추가 시간                 | DEFAULT CURRENT_TIMESTAMP |
 
-#### 7.2.11 RefreshToken
+#### 7.2.11 UserBookCollection
+
+| 필드명         | 타입         | Null 허용 | 설명                    | 제약조건                   |
+| ------------ | ------------ | -------- | ----------------------- | ------------------------ |
+| id           | UUID         | 아니오     | 고유 식별자               | PK                       |
+| userBookId   | UUID         | 아니오     | 사용자 책 ID              | FK → UserBook.id         |
+| collectionId | UUID         | 아니오     | 컬렉션 ID                | FK → Collection.id       |
+| addedAt      | TIMESTAMP    | 아니오     | 추가 시간                 | DEFAULT CURRENT_TIMESTAMP |
+
+#### 7.2.12 RefreshToken
 
 | 필드명         | 타입         | Null 허용 | 설명                   | 제약조건                   |
 | ------------ | ------------ | -------- | ---------------------- | ------------------------ |
@@ -594,7 +611,7 @@ erDiagram
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                | DEFAULT CURRENT_TIMESTAMP |
 | revokedAt    | TIMESTAMP    | 예        | 취소 시간 (NULL=활성)     |                          |
 
-#### 7.2.12 Reaction
+#### 7.2.13 Reaction
 
 | 필드명         | 타입         | Null 허용 | 설명                    | 제약조건                   |
 | ------------ | ------------ | -------- | ----------------------- | ------------------------ |
@@ -605,7 +622,7 @@ erDiagram
 | createdAt    | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt    | TIMESTAMP    | 아니오     | 마지막 업데이트 시간         | ON UPDATE CURRENT_TIMESTAMP |
 
-#### 7.2.13 ReadingLog
+#### 7.2.14 ReadingLog
 
 | 필드명          | 타입         | Null 허용 | 설명                    | 제약조건                   |
 | ------------- | ------------ | -------- | ----------------------- | ------------------------ |
@@ -617,7 +634,7 @@ erDiagram
 | notes         | TEXT         | 예        | 메모                     |                          |
 | createdAt     | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
 
-#### 7.2.14 Stroke
+#### 7.2.15 Stroke
 
 | 필드명           | 타입         | Null 허용 | 설명                    | 제약조건                   |
 | -------------- | ------------ | -------- | ----------------------- | ------------------------ |
@@ -627,6 +644,48 @@ erDiagram
 | sourceType     | VARCHAR(10)  | 아니오     | 입력 소스 타입             | 'MOBILE' or 'WEB'        |
 | createdAt      | TIMESTAMP    | 아니오     | 생성 시간                 | DEFAULT CURRENT_TIMESTAMP |
 | updatedAt      | TIMESTAMP    | 아니오     | 마지막 업데이트 시간         | ON UPDATE CURRENT_TIMESTAMP |
+
+### 7.3 Naver Books API 통합
+
+Naver Books Open API를 활용하여 정확한 도서 데이터베이스를 구축합니다:
+
+#### 7.3.1 주요 통합 포인트
+
+| 통합 기능        | API 엔드포인트                          | 구현 방식                                        |
+| -------------- | ------------------------------------- | ----------------------------------------------- |
+| 도서 검색       | https://openapi.naver.com/v1/search/book.json | • 키워드 검색<br>• 10-100개 결과 페이징<br>• 정렬 옵션 지원 |
+| ISBN 검색      | https://openapi.naver.com/v1/search/book_adv.json | • ISBN으로 정확한 도서 검색<br>• 상세 메타데이터 추출 |
+| 표지 이미지     | 검색 결과 image 필드                     | • 원본 URL 저장<br>• CDN 프록시 설정<br>• 이미지 최적화  |
+
+#### 7.3.2 데이터 매핑
+
+| Naver API 필드   | BookNote 엔티티 필드    | 변환 로직                                 |
+| --------------- | --------------------- | ---------------------------------------- |
+| title           | title                 | HTML 태그 제거 (예: `<b></b>`)             |
+| image           | coverUrl              | 그대로 매핑 (URL 유효성 검증)                 |
+| author          | author                | 그대로 매핑                                 |
+| publisher       | publisher             | 그대로 매핑                                 |
+| pubdate         | publishedAt           | YYYYMMDD → YYYY-MM-DD 변환               |
+| description     | description           | HTML 태그 제거, 트림 처리                   |
+| isbn            | isbn                  | 공백 제거, 유효성 검증                        |
+| price           | price                 | 문자열 → 숫자 변환                          |
+| discount        | discount              | 문자열 → 숫자 변환                          |
+
+#### 7.3.3 API 호출 관리
+
+| 구현 항목        | 접근 방식                          | 세부 내용                                        |
+| -------------- | --------------------------------- | ----------------------------------------------- |
+| 인증 관리        | X-Naver-Client-Id, X-Naver-Client-Secret | • 환경 변수 저장<br>• 민감 정보 암호화<br>• 키 교체 메커니즘 |
+| 요청 제한       | 캐싱 + 요청 스로틀링                 | • 동일 검색어/ISBN 결과 캐싱<br>• 최대 초당 10 요청으로 제한<br>• 요청 큐 관리 |
+| 오류 처리        | 재시도 + 우아한 실패                 | • 일시적 오류 자동 재시도<br>• 서버 장애 시 로컬 검색 폴백<br>• 상세 오류 로깅 |
+
+#### 7.3.4 데이터 동기화 전략
+
+| 시나리오         | 접근 방식                         | 구현 방식                                        |
+| -------------- | -------------------------------- | ----------------------------------------------- |
+| 최초 책 검색     | 실시간 API 검색 후 로컬 저장         | • 사용자 검색어 기반 API 호출<br>• 결과 즉시 로컬 DB 저장<br>• 중복 검사 |
+| 책 메타데이터 업데이트 | 주기적 재동기화                 | • 30일 이상 경과 데이터 재검증<br>• 가격 및 표지 정보 업데이트<br>• 변경사항 기록 |
+| 대량 검색        | 배치 처리                        | • 사용자 요청 큐잉<br>• 백그라운드 배치 처리<br>• 완료 후 알림 |
 
 ---
 
