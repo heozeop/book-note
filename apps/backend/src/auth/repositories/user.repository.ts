@@ -1,7 +1,14 @@
+import { EntityManager } from '@mikro-orm/core';
+import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../../common/repositories/base.repository';
 import { User } from '../entities/user.entity';
 
+@Injectable()
 export class UserRepository extends BaseRepository<User> {
+  constructor(protected readonly em: EntityManager) {
+    super(em, 'User');
+  }
+
   /**
    * 이메일로 사용자를 찾습니다.
    * @param email 찾을 사용자의 이메일
@@ -73,21 +80,5 @@ export class UserRepository extends BaseRepository<User> {
    */
   async verifyEmail(id: string): Promise<number> {
     return this.nativeUpdate({ id }, { verifiedAt: new Date() });
-  }
-
-  /**
-   * 엔티티를 영속화하고 변경사항을 저장합니다.
-   * @param entity 저장할 엔티티
-   */
-  async persistAndFlush(entity: User): Promise<void> {
-    this.getEntityManager().persist(entity);
-    await this.getEntityManager().flush();
-  }
-  
-  /**
-   * 변경사항을 저장합니다.
-   */
-  async flush(): Promise<void> {
-    await this.getEntityManager().flush();
   }
 } 

@@ -1,7 +1,14 @@
+import { EntityManager } from '@mikro-orm/core';
+import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../../common/repositories/base.repository';
 import { RefreshToken, TokenStatus } from '../entities/refresh-token.entity';
 
+@Injectable()
 export class RefreshTokenRepository extends BaseRepository<RefreshToken> {
+  constructor(protected readonly em: EntityManager) {
+    super(em, 'RefreshToken');
+  }
+
   /**
    * 토큰 해시로 리프레시 토큰을 찾습니다.
    * @param tokenHash 해시된 토큰 문자열

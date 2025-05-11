@@ -1,10 +1,12 @@
 import { Options } from '@mikro-orm/core';
-import { defineConfig } from '@mikro-orm/mysql';
-import { RefreshToken } from './src/auth/entities/refresh-token.entity';
-import { User } from './src/auth/entities/user.entity';
+import { SqliteDriver } from '@mikro-orm/sqlite';
+import { RefreshToken } from '../src/auth/entities/refresh-token.entity';
+import { User } from '../src/auth/entities/user.entity';
 
-// Mikro-ORM configuration
-const ormConfig: Options = defineConfig({
+// Test-specific Mikro-ORM configuration
+const testConfig: Options = ({
+  driver: SqliteDriver,
+  dbName: ':memory:',
   entities: [User, RefreshToken],
   allowGlobalContext: true,
   discovery: {
@@ -13,6 +15,8 @@ const ormConfig: Options = defineConfig({
     alwaysAnalyseProperties: true,
     disableDynamicFileAccess: false,
   },
+  // Drop tables when initializing
+  forceUndefined: true,
   // Schema configuration
   schemaGenerator: {
     disableForeignKeys: true,
@@ -20,4 +24,4 @@ const ormConfig: Options = defineConfig({
   },
 }); 
 
-export default ormConfig
+export default testConfig;
