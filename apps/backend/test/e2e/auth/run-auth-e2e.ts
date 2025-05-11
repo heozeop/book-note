@@ -1,7 +1,7 @@
 /**
  * Run script for Authentication E2E tests
  * 
- * This script is used to run the Authentication E2E tests with
+ * This script is used to run all Authentication E2E tests with
  * appropriate Jest configuration.
  */
 
@@ -15,8 +15,8 @@ run([
   '--runInBand', // Run tests serially
   '--detectOpenHandles', // Help detect open handles
   '--forceExit', // Force exit after tests complete
-  'test/e2e/auth/auth.e2e-spec.ts', // Only run the basic auth tests
+  'test/e2e/auth', // Run all auth tests in this directory
 ]);
 
 // Log message on start
-console.log('Running Authentication E2E Tests...'); 
+console.log('Running All Authentication E2E Tests...'); 

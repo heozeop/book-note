@@ -35,12 +35,12 @@ export class TestAppModule {
           app: {
             jwt: {
               secret: 'test-secret-key',
-              expiresIn: '1h',
+              expiresIn: 3600, // 1 hour in seconds
               refreshTokenExpiryDays: 7,
             }
           },
           JWT_SECRET: 'test-secret-key',
-          JWT_EXPIRES_IN: '1h',
+          JWT_EXPIRES_IN: 3600, // 1 hour in seconds
         })]
       }),
       
@@ -50,7 +50,7 @@ export class TestAppModule {
         useFactory: async (configService: ConfigService) => ({
           secret: 'test-secret-key',
           signOptions: {
-            expiresIn: '1h',
+            expiresIn: 3600, // 1 hour in seconds
           },
         }),
         inject: [ConfigService],

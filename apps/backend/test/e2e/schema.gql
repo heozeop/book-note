@@ -1,0 +1,54 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthTokens {
+  accessToken: String!
+  expiresIn: Float!
+  refreshToken: String
+  tokenType: String!
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  changePassword(input: ChangePasswordInput!): Boolean!
+  deleteAccount: Boolean!
+  updateProfile(input: UpdateProfileInput!): UserType!
+}
+
+type Query {
+  me: UserType!
+  user(id: String!): UserType!
+  users: [UserType!]!
+}
+
+input UpdateProfileInput {
+  displayName: String
+  profileImage: String
+  timezone: String
+}
+
+"""The role of the user"""
+enum UserRole {
+  ADMIN
+  USER
+}
+
+type UserType {
+  createdAt: DateTime!
+  displayName: String!
+  email: String!
+  id: String!
+  isVerified: Boolean!
+  profileImage: String
+  role: UserRole!
+}

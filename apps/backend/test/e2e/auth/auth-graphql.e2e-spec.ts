@@ -1,25 +1,24 @@
 import { MikroORM } from '@mikro-orm/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import * as cookieParser from 'cookie-parser';
 import * as request from 'supertest';
+import { AuthTestUtil } from '../utils/auth-test.util';
 import { TestAppModule } from '../utils/test-app.module';
 
 /**
  * GraphQL Authentication E2E Tests
  * Based on BookNote PRD - Section 7 & 9
  * 
- * NOTE: These tests are currently skipped due to an issue with GraphQL entity decorators.
- * Error: "Cannot determine a GraphQL output type for the 'author'"
- * This requires fixing the GraphQL entity definitions before these tests can be enabled.
- * 
- * Additionally, authentication operations (login, register, logout, refreshToken)
- * have been moved to REST-only endpoints for security reasons. The GraphQL API
- * now only exposes the 'me' query for authenticated users.
+ * Tests GraphQL queries that require authentication.
+ * Authentication operations (login, register, logout, refreshToken)
+ * are handled by REST-only endpoints for security reasons. The GraphQL API
+ * exposes the 'me' query for authenticated users.
  */
-describe.skip('Authentication GraphQL (e2e)', () => {
+describe('Authentication GraphQL (e2e)', () => {
   let app: INestApplication;
   let orm: MikroORM;
-  let jwtToken: string;
+  let authCookies: string[] = [];
   let testUserEmail: string;
   let testUserId: string;
 
@@ -29,6 +28,9 @@ describe.skip('Authentication GraphQL (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    
+    // Add cookie-parser middleware
+    app.use(cookieParser());
     
     // Apply global pipes like in main.ts
     app.useGlobalPipes(new ValidationPipe({
@@ -47,8 +49,7 @@ describe.skip('Authentication GraphQL (e2e)', () => {
     // Generate a unique email for test user
     testUserEmail = `gql-test-${Date.now()}@example.com`;
     
-    // Create a test user and get JWT token through REST endpoints
-    // since GraphQL mutations for auth are no longer available
+    // Create a test user
     const registerResponse = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
@@ -59,7 +60,9 @@ describe.skip('Authentication GraphQL (e2e)', () => {
       });
       
     expect(registerResponse.status).toBe(201);
+    testUserId = registerResponse.body.id;
     
+    // Login to get auth cookies
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
@@ -69,15 +72,9 @@ describe.skip('Authentication GraphQL (e2e)', () => {
       
     expect(loginResponse.status).toBe(201);
     
-    // Extract JWT token for protected GraphQL queries
-    testUserId = loginResponse.body.user.id;
-    if (loginResponse.body.token && loginResponse.body.token.accessToken) {
-      jwtToken = loginResponse.body.token.accessToken;
-    } else if (loginResponse.body.accessToken) {
-      jwtToken = loginResponse.body.accessToken;
-    }
-    
-    expect(jwtToken).toBeDefined();
+    // Get cookies for protected GraphQL queries
+    authCookies = AuthTestUtil.getCookies(loginResponse);
+    expect(authCookies.length).toBeGreaterThan(0);
   });
 
   afterAll(async () => {
@@ -87,21 +84,8 @@ describe.skip('Authentication GraphQL (e2e)', () => {
     await app.close();
   });
 
-  // Skip tests for GraphQL mutations that were removed
-  describe.skip('User Registration (moved to REST)', () => {
-    it('should register a new user via GraphQL', async () => {
-      // This functionality has been moved to REST endpoints
-    });
-  });
-
-  describe.skip('User Login (moved to REST)', () => {
-    it('should login with valid credentials via GraphQL', async () => {
-      // This functionality has been moved to REST endpoints
-    });
-  });
-
   describe('Protected GraphQL Queries', () => {
-    it('should access protected query with valid JWT token', async () => {
+    it('should access protected query with valid auth cookies', async () => {
       const profileQuery = `
         query {
           me {
@@ -114,18 +98,18 @@ describe.skip('Authentication GraphQL (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/graphql')
-        .set('Authorization', `Bearer ${jwtToken}`)
+        .set('Cookie', authCookies)
         .send({
           query: profileQuery
         })
         .expect(200);
 
-      expect(response.body.data.me).toBeDefined();
-      expect(response.body.data.me.id).toEqual(testUserId);
-      expect(response.body.data.me.email).toEqual(testUserEmail);
+      expect(response.body.data?.me).toBeDefined();
+      expect(response.body.data?.me?.id).toEqual(testUserId);
+      expect(response.body.data?.me?.email).toEqual(testUserEmail);
     });
 
-    it('should reject protected query without token', async () => {
+    it('should reject protected query without auth cookies', async () => {
       const profileQuery = `
         query {
           me {
@@ -144,13 +128,7 @@ describe.skip('Authentication GraphQL (e2e)', () => {
 
       expect(response.body.errors).toBeDefined();
       expect(response.body.data).toBeNull();
-      expect(response.body.errors[0].message).toContain('Unauthorized');
-    });
-  });
-
-  describe.skip('Token Refresh (moved to REST)', () => {
-    it('should refresh an access token', async () => {
-      // This functionality has been moved to REST endpoints
+      expect(response.body.errors[0].message).toContain('인증이 필요합니다');
     });
   });
 }); 

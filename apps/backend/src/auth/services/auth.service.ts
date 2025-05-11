@@ -98,7 +98,6 @@ export class AuthService {
       email: user.email,
       role: user.role,
       iat: now,
-      exp: now + this.configService.get<number>('JWT_EXPIRES_IN', 3600), // 1 hour
     };
     
     const accessToken = this.jwtService.sign(payload);

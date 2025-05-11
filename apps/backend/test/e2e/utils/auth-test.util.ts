@@ -46,141 +46,149 @@ export class AuthTestUtil {
   }
 
   /**
-   * Login with the given credentials and return the JWT token
-   * Returns null for accessToken if JWT is not properly configured
+   * Helper function to safely access cookies
+   */
+  static getCookies(response: request.Response): string[] {
+    const cookies = response.headers['set-cookie'];
+    return Array.isArray(cookies) ? cookies : [];
+  }
+
+  /**
+   * Extract access token from cookies if needed for headers
+   */
+  static extractAccessTokenFromCookies(cookies: string[]): string | null {
+    const accessTokenCookie = cookies.find(cookie => cookie.startsWith('accessToken='));
+    if (!accessTokenCookie) return null;
+    
+    const match = accessTokenCookie.match(/accessToken=([^;]+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Debug cookies and log any issues
+   */
+  static debugCookies(cookies: string[]): void {
+    if (cookies.length === 0) {
+      console.warn('No cookies found');
+      return;
+    }
+
+    const accessTokenCookie = cookies.find(cookie => cookie.includes('accessToken='));
+    const refreshTokenCookie = cookies.find(cookie => cookie.includes('refreshToken='));
+
+    console.log('Access Token Cookie present:', !!accessTokenCookie);
+    console.log('Refresh Token Cookie present:', !!refreshTokenCookie);
+    
+    if (accessTokenCookie) {
+      console.log('Access Token Cookie:', accessTokenCookie);
+    }
+    
+    if (refreshTokenCookie) {
+      console.log('Refresh Token Cookie:', refreshTokenCookie);
+    }
+  }
+
+  /**
+   * Login with the given credentials and return the cookies and user id
    */
   static async login(
     app: INestApplication,
     credentials: { email: string; password: string },
-  ): Promise<{ accessToken: string | null; userId: string | null }> {
+  ): Promise<{ cookies: string[]; userId: string | null; accessToken: string | null }> {
     try {
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(credentials);
 
-      // Login can return 200 or 201, both are success
+      // Login should return 200 or 201
       if (response.status === 200 || response.status === 201) {
         console.log('Login successful with status', response.status);
         
-        // The API seems to be returning { token: { accessToken: ... } }
-        if (response.body.token && response.body.token.accessToken) {
-          return {
-            accessToken: response.body.token.accessToken,
-            userId: response.body.user?.id || null,
-          };
-        }
+        // Get cookies from response
+        const cookies = this.getCookies(response);
         
-        // Handle the case where the response is in the format { accessToken: ... }
-        if (response.body.accessToken) {
-          return {
-            accessToken: response.body.accessToken,
-            userId: response.body.user?.id || null,
-          };
-        }
+        // Extract access token from cookies if needed for Authorization header
+        const accessToken = this.extractAccessTokenFromCookies(cookies);
         
-        console.warn('Login succeeded but token format is unexpected:', response.body);
-        return { accessToken: null, userId: null };
+        return {
+          cookies,
+          userId: response.body.user?.id || null,
+          accessToken,
+        };
       }
       
-      if (response.status === 500) {
-        console.warn('Login failed with status 500 - this might be due to JWT configuration issues');
-        return { accessToken: null, userId: null };
-      }
-
-      // For everything else, no need to throw
       console.warn(`Login failed with status ${response.status}:`, response.body);
-      return { accessToken: null, userId: null };
+      return { cookies: [], userId: null, accessToken: null };
     } catch (error) {
       console.error('Exception during login:', error);
-      return { accessToken: null, userId: null };
+      return { cookies: [], userId: null, accessToken: null };
     }
   }
 
   /**
-   * Create a refresh token for the authenticated user
+   * Refresh tokens using the refresh token cookie
    */
-  static async createRefreshToken(
+  static async refreshTokens(
     app: INestApplication,
-    jwtToken: string,
-  ): Promise<string> {
-    const response = await request(app.getHttpServer())
-      .post('/auth/refresh-token')
-      .set('Authorization', `Bearer ${jwtToken}`);
+    cookies: string[],
+  ): Promise<{ cookies: string[]; success: boolean }> {
+    try {
+      const response = await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .set('Cookie', cookies);
 
-    if (response.status !== 201) {
-      throw new Error(`Failed to create refresh token: ${JSON.stringify(response.body)}`);
+      if (response.status === 200) {
+        const newCookies = this.getCookies(response);
+        return { cookies: newCookies, success: true };
+      }
+      
+      return { cookies: [], success: false };
+    } catch (error) {
+      console.error('Exception during token refresh:', error);
+      return { cookies: [], success: false };
     }
-
-    return response.body.token;
   }
 
   /**
-   * Refresh an access token using a refresh token
+   * Log out a user by revoking all refresh tokens and clearing cookies
    */
-  static async refreshAccessToken(
+  static async logout(
+    app: INestApplication, 
+    cookies: string[]
+  ): Promise<boolean> {
+    try {
+      const response = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', cookies);
+
+      return response.status === 200;
+    } catch (error) {
+      console.error('Exception during logout:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get current user data
+   */
+  static async getCurrentUser(
     app: INestApplication,
-    refreshToken: string,
-  ): Promise<string> {
-    const response = await request(app.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken });
+    cookies: string[],
+  ): Promise<Record<string, any> | null> {
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Cookie', cookies);
 
-    if (response.status !== 200) {
-      throw new Error(`Failed to refresh token: ${JSON.stringify(response.body)}`);
+      if (response.status !== 200) {
+        return null;
+      }
+
+      return response.body;
+    } catch (error) {
+      console.error('Exception getting current user:', error);
+      return null;
     }
-
-    return response.body.accessToken;
-  }
-
-  /**
-   * Log out a user by revoking all refresh tokens
-   */
-  static async logout(app: INestApplication, jwtToken: string): Promise<void> {
-    const response = await request(app.getHttpServer())
-      .post('/auth/logout')
-      .set('Authorization', `Bearer ${jwtToken}`);
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to logout: ${JSON.stringify(response.body)}`);
-    }
-  }
-
-  /**
-   * Get user profile data
-   */
-  static async getProfile(
-    app: INestApplication,
-    jwtToken: string,
-  ): Promise<Record<string, any>> {
-    const response = await request(app.getHttpServer())
-      .get('/auth/profile')
-      .set('Authorization', `Bearer ${jwtToken}`);
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to get profile: ${JSON.stringify(response.body)}`);
-    }
-
-    return response.body;
-  }
-
-  /**
-   * Update user profile
-   */
-  static async updateProfile(
-    app: INestApplication,
-    jwtToken: string,
-    updateData: Record<string, any>,
-  ): Promise<Record<string, any>> {
-    const response = await request(app.getHttpServer())
-      .patch('/auth/profile')
-      .set('Authorization', `Bearer ${jwtToken}`)
-      .send(updateData);
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to update profile: ${JSON.stringify(response.body)}`);
-    }
-
-    return response.body;
   }
 
   /**
@@ -189,18 +197,23 @@ export class AuthTestUtil {
   static async checkPasswordStrength(
     app: INestApplication,
     password: string,
-  ): Promise<{ strength: number; feedback: string }> {
-    const response = await request(app.getHttpServer())
-      .get(`/auth/password-strength/${password}`);
+  ): Promise<{ strength: number; feedback: string } | null> {
+    try {
+      const response = await request(app.getHttpServer())
+        .get(`/auth/password-strength/${password}`);
 
-    if (response.status !== 200) {
-      throw new Error(`Failed to check password strength: ${JSON.stringify(response.body)}`);
+      if (response.status !== 200) {
+        return null;
+      }
+
+      return {
+        strength: response.body.strength,
+        feedback: response.body.feedback,
+      };
+    } catch (error) {
+      console.error('Exception checking password strength:', error);
+      return null;
     }
-
-    return {
-      strength: response.body.strength,
-      feedback: response.body.feedback,
-    };
   }
 
   /**
