@@ -1,5 +1,5 @@
 import { Field, InputType, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { UserRole } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 
 // Register UserRole enum with GraphQL
 registerEnumType(UserRole, {
@@ -29,6 +29,23 @@ export class UserType {
 
   @Field()
   createdAt: Date;
+
+  /**
+   * User 엔티티를 UserType으로 변환합니다.
+   * @param user User 엔티티
+   * @returns UserType 객체
+   */
+  static fromEntity(user: User): UserType {
+    const userType = new UserType();
+    userType.id = user.id;
+    userType.email = user.email;
+    userType.displayName = user.displayName;
+    userType.role = user.role;
+    userType.profileImage = user.profileImage;
+    userType.isVerified = !!user.verifiedAt;
+    userType.createdAt = user.createdAt;
+    return userType;
+  }
 }
 
 @InputType()
@@ -56,6 +73,27 @@ export class RegisterInput {
 
   @Field({ nullable: true })
   timezone?: string;
+}
+
+@InputType()
+export class UpdateProfileInput {
+  @Field({ nullable: true })
+  displayName?: string;
+
+  @Field({ nullable: true })
+  profileImage?: string;
+
+  @Field({ nullable: true })
+  timezone?: string;
+}
+
+@InputType()
+export class ChangePasswordInput {
+  @Field()
+  currentPassword: string;
+
+  @Field()
+  newPassword: string;
 }
 
 @ObjectType()

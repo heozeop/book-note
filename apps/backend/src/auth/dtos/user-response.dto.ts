@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 
 export class UserResponseDto {
   @ApiProperty({
@@ -45,4 +45,21 @@ export class UserResponseDto {
     example: '2023-01-01T00:00:00Z',
   })
   createdAt: Date;
+
+  /**
+   * User 엔티티를 UserResponseDto로 변환합니다.
+   * @param user User 엔티티
+   * @returns UserResponseDto 객체
+   */
+  static fromEntity(user: User): UserResponseDto {
+    const dto = new UserResponseDto();
+    dto.id = user.id;
+    dto.email = user.email;
+    dto.displayName = user.displayName;
+    dto.role = user.role;
+    dto.profileImage = user.profileImage;
+    dto.isVerified = !!user.verifiedAt;
+    dto.createdAt = user.createdAt;
+    return dto;
+  }
 } 

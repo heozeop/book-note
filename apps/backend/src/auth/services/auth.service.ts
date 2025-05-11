@@ -66,25 +66,27 @@ export class AuthService {
    * @returns JWT 액세스 토큰
    */
   async login(loginDto: LoginDto): Promise<{ accessToken: string; user: Partial<User> }> {
-    const { password } = loginDto;
+    const { password, email } = loginDto;
     
     // 이메일 정규화
-    const email = this.normalizeEmail(loginDto.email);
+    const normalizedEmail = this.normalizeEmail(email);
 
     // 사용자 확인
-    const user = await this.userRepository.findByEmail(email);
+    const user = await this.userRepository.findByEmail(normalizedEmail);
     if (!user) {
       throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
 
-    // 비밀번호 검증
-    const isPasswordValid = await this.passwordService.validatePassword(
-      password,
-      user.passwordHash,
-    );
+    // 비밀번호 검증 (리프레시 토큰 갱신 시에는 건너뜀)
+    if (password) {
+      const isPasswordValid = await this.passwordService.validatePassword(
+        password,
+        user.passwordHash,
+      );
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
     }
 
     // JWT 토큰 생성

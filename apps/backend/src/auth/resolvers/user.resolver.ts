@@ -1,33 +1,12 @@
 import { BadRequestException, UseGuards } from '@nestjs/common';
-import { Args, Field, InputType, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '../decorators/current-user.decorator';
-import { UserType } from '../dtos/user.graphql';
+import { ChangePasswordInput, UpdateProfileInput, UserType } from '../dtos/user.graphql';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AuthService } from '../services/auth.service';
 import { PasswordService } from '../services/password.service';
 import { TokenService } from '../services/token.service';
-
-@InputType()
-class UpdateProfileInput {
-  @Field({ nullable: true })
-  displayName?: string;
-
-  @Field({ nullable: true })
-  profileImage?: string;
-
-  @Field({ nullable: true })
-  timezone?: string;
-}
-
-@InputType()
-class ChangePasswordInput {
-  @Field()
-  currentPassword: string;
-
-  @Field()
-  newPassword: string;
-}
 
 @Resolver(() => UserType)
 export class UserResolver {
@@ -42,10 +21,7 @@ export class UserResolver {
   async users(): Promise<UserType[]> {
     // 관리자만 접근 가능하도록 구현해야 함
     const users = await this.authService.findAllUsers();
-    return users.map(user => ({
-      ...user,
-      isVerified: !!user.verifiedAt,
-    }));
+    return users.map(user => UserType.fromEntity(user));
   }
 
   @Query(() => UserType)
@@ -59,10 +35,7 @@ export class UserResolver {
       throw new BadRequestException('User not found');
     }
     
-    return {
-      ...user,
-      isVerified: !!user.verifiedAt,
-    };
+    return UserType.fromEntity(user);
   }
 
   @Mutation(() => UserType)
@@ -74,10 +47,11 @@ export class UserResolver {
     await this.authService.updateUser(currentUser.id, updateProfileInput);
     
     const updatedUser = await this.authService.findUserById(currentUser.id);
-    return {
-      ...updatedUser,
-      isVerified: !!updatedUser.verifiedAt,
-    };
+    if (!updatedUser) {
+      throw new BadRequestException('User not found');
+    }
+    
+    return UserType.fromEntity(updatedUser);
   }
 
   @Mutation(() => Boolean)
@@ -87,6 +61,9 @@ export class UserResolver {
     @Args('input') changePasswordInput: ChangePasswordInput,
   ): Promise<boolean> {
     const user = await this.authService.findUserById(currentUser.id);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
     
     // 현재 비밀번호 검증
     const isPasswordValid = await this.passwordService.validatePassword(

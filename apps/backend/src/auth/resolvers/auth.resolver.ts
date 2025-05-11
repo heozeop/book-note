@@ -42,10 +42,7 @@ export class AuthResolver {
 
     // 응답 구성
     return {
-      user: {
-        ...user,
-        isVerified: !!user.verifiedAt,
-      },
+      user: UserType.fromEntity(user as User),
       tokens: {
         accessToken,
         refreshToken,
@@ -86,10 +83,7 @@ export class AuthResolver {
 
     // 응답 구성
     return {
-      user: {
-        ...user,
-        isVerified: !!user.verifiedAt,
-      },
+      user: UserType.fromEntity(user),
       tokens: {
         accessToken,
         refreshToken,
@@ -110,10 +104,10 @@ export class AuthResolver {
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: User): Promise<UserType> {
     const userDetails = await this.authService.findUserById(user.id);
-    return {
-      ...userDetails,
-      isVerified: !!userDetails.verifiedAt,
-    };
+    if (!userDetails) {
+      throw new Error('User not found');
+    }
+    return UserType.fromEntity(userDetails);
   }
 
   @Mutation(() => AuthTokens)

@@ -41,7 +41,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
     MikroOrmModule.forFeature({
       entities: [User, RefreshToken],
-      repositories: [UserRepository, RefreshTokenRepository],
     }),
   ],
   controllers: [AuthController],
