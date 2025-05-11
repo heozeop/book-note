@@ -3,11 +3,10 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { User } from "../../auth/entities/user.entity";
 import { GqlAuthGuard } from "../../auth/guards/gql-auth.guard";
-import { Book } from "../entities/book.entity";
-import { BookStatus } from "../graphql/types/book-status.enum";
+import { Book, BookStatus } from "../entities/book.entity";
+import { CreateBookInput } from "../graphql/inputs/create-book.input";
+import { UpdateBookInput } from "../graphql/inputs/update-book.input";
 import { BookType } from "../graphql/types/book.type";
-import { CreateBookInput } from "../inputs/create-book.input";
-import { UpdateBookInput } from "../inputs/update-book.input";
 import { BookService } from "../services/book.service";
 
 @Resolver(() => BookType)
@@ -99,7 +98,7 @@ export class BookResolver {
       totalPages: book.totalPages,
       startedAt: book.startedAt,
       finishedAt: book.finishedAt,
-      metadata: book.metadata ? JSON.stringify(book.metadata) : null,
+      metadata: book.metadata && JSON.stringify(book.metadata),
       createdAt: book.createdAt,
       updatedAt: book.updatedAt,
       owner: { id: book.owner.id } as any, // Will be resolved by UserResolver if needed

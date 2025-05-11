@@ -10,6 +10,7 @@ import {
 import { v4 } from "uuid";
 import { User } from "../../auth/entities/user.entity";
 import { Note } from "../../notes/entities/note.entity";
+import { BookCollection } from "./book-collection.entity";
 
 export enum BookStatus {
   WANT_TO_READ = "want_to_read",
@@ -66,6 +67,9 @@ export class Book {
 
   @OneToMany(() => Note, (note) => note.book, { eager: false })
   notes = new Collection<Note>(this);
+
+  @OneToMany(() => BookCollection, (bookCollection) => bookCollection.book)
+  bookCollections = new Collection<BookCollection>(this);
 
   @Property()
   createdAt: Date = new Date();
