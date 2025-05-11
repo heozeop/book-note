@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { CreateThoughtDto, InputType } from "../dtos/create-thought.dto";
+import { CreateThoughtDto, ThoughtInputType } from "../dtos/create-thought.dto";
 import { Stroke } from "../entities/stroke.entity";
 import { Thought } from "../entities/thought.entity";
 import { NoteRepository } from "../repositories/note.repository";
@@ -43,9 +43,9 @@ export class ThoughtService {
     }
 
     // Validate input based on type
-    if (inputType === InputType.TEXT && !text) {
+    if (inputType === ThoughtInputType.TEXT && !text) {
       throw new BadRequestException("Text input requires text content");
-    } else if (inputType === InputType.STROKE && !strokeData) {
+    } else if (inputType === ThoughtInputType.STROKE && !strokeData) {
       throw new BadRequestException("Stroke input requires stroke data");
     }
 
@@ -64,7 +64,7 @@ export class ThoughtService {
     }
 
     // Set text content if it's text input
-    if (inputType === InputType.TEXT) {
+    if (inputType === ThoughtInputType.TEXT) {
       thought.text = text;
     }
 
@@ -72,7 +72,7 @@ export class ThoughtService {
     await this.thoughtRepository.persistAndFlush(thought);
 
     // If it's stroke input, create and save the stroke data
-    if (inputType === InputType.STROKE && strokeData) {
+    if (inputType === ThoughtInputType.STROKE && strokeData) {
       const stroke = new Stroke();
       stroke.thought = thought;
       stroke.strokeData = strokeData;
@@ -134,7 +134,7 @@ export class ThoughtService {
     }
 
     // If stroke data is provided and it's a stroke input type thought
-    if (updateData.strokeData && thought.inputType === InputType.STROKE) {
+    if (updateData.strokeData && thought.inputType === ThoughtInputType.STROKE) {
       // Find existing stroke or create new one
       let stroke = (await this.strokeRepository.findByThoughtId(id))[0];
 

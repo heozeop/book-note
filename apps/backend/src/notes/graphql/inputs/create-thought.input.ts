@@ -9,7 +9,7 @@ import {
   Max,
   Min,
 } from "class-validator";
-import { InputType as ThoughtInputType } from "../../../notes/dtos/create-thought.dto";
+import { ThoughtInputType } from "../../../notes/dtos/create-thought.dto";
 
 @InputType()
 export class CreateThoughtInput {

@@ -1,4 +1,4 @@
-import { Field, InputType } from "@nestjs/graphql";
+import { Field, InputType, } from "@nestjs/graphql";
 import {
   IsEnum,
   IsNotEmpty,
@@ -10,7 +10,7 @@ import {
   Min,
 } from "class-validator";
 
-export enum InputType {
+export enum ThoughtInputType {
   TEXT = "TEXT",
   STROKE = "STROKE",
 }
@@ -44,8 +44,8 @@ export class CreateThoughtDto {
   depth: number = 0;
 
   @Field()
-  @IsEnum(InputType)
-  inputType: string = InputType.TEXT;
+  @IsEnum(ThoughtInputType)
+  inputType: string = ThoughtInputType.TEXT;
 
   @Field({ nullable: true })
   @IsString()
