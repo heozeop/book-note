@@ -1,18 +1,18 @@
 import { Field, InputType } from "@nestjs/graphql";
 import {
-    IsEnum,
-    IsNotEmpty,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Max,
-    Min,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
 } from "class-validator";
 
 export enum InputType {
-  TEXT = 'TEXT',
-  STROKE = 'STROKE'
+  TEXT = "TEXT",
+  STROKE = "STROKE",
 }
 
 @InputType()
@@ -51,4 +51,4 @@ export class CreateThoughtDto {
   @IsString()
   @IsOptional()
   strokeData?: string; // JSON stringified stroke data, used when inputType is STROKE
-} 
+}

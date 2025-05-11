@@ -1,5 +1,14 @@
 import { Field, InputType } from "@nestjs/graphql";
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from "class-validator";
 import { InputType as ThoughtInputType } from "../../../notes/dtos/create-thought.dto";
 
 @InputType()
@@ -38,4 +47,4 @@ export class CreateThoughtInput {
   @IsString()
   @IsOptional()
   strokeData?: string; // JSON stringified stroke data
-} 
+}

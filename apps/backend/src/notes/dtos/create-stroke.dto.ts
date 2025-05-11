@@ -12,4 +12,4 @@ export class CreateStrokeDto {
   @IsString()
   @IsNotEmpty()
   strokeData: string; // JSON stringified stroke data
-} 
+}

@@ -3,7 +3,7 @@ import { UserType } from "../../../auth/graphql/types/user.type";
 import { BookType } from "../../../books/graphql/types/book.type";
 import { ThoughtType } from "./thought.type";
 
-@ObjectType('Note')
+@ObjectType("Note")
 export class NoteType {
   @Field(() => ID)
   id: string;
@@ -40,4 +40,4 @@ export class NoteType {
 
   @Field()
   updatedAt: Date;
-} 
+}

@@ -36,12 +36,12 @@ export class ThoughtRepository extends BaseRepository<Thought> {
   async deleteThoughtWithChildren(id: string): Promise<void> {
     // First find all child thoughts recursively
     const childrenToDelete = await this.findChildrenRecursively(id);
-    
+
     // Delete children first
     for (const child of childrenToDelete) {
       await this.nativeDelete({ id: child.id });
     }
-    
+
     // Then delete the parent thought
     await this.nativeDelete({ id });
   }
@@ -52,12 +52,12 @@ export class ThoughtRepository extends BaseRepository<Thought> {
   private async findChildrenRecursively(parentId: string): Promise<Thought[]> {
     const children = await this.find({ parentThought: parentId });
     let allDescendants = [...children];
-    
+
     for (const child of children) {
       const descendants = await this.findChildrenRecursively(child.id);
       allDescendants = [...allDescendants, ...descendants];
     }
-    
+
     return allDescendants;
   }
-} 
+}

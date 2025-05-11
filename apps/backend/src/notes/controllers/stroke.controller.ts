@@ -1,12 +1,12 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { CreateStrokeDto } from "../dtos/create-stroke.dto";
@@ -20,7 +20,7 @@ export class StrokeController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createStroke(
-    @Body() createStrokeDto: CreateStrokeDto
+    @Body() createStrokeDto: CreateStrokeDto,
   ): Promise<Stroke> {
     return this.strokeService.createStroke(createStrokeDto);
   }
@@ -28,7 +28,7 @@ export class StrokeController {
   @Get("thought/:thoughtId")
   @UseGuards(JwtAuthGuard)
   async getStrokesByThought(
-    @Param("thoughtId") thoughtId: string
+    @Param("thoughtId") thoughtId: string,
   ): Promise<Stroke[]> {
     return this.strokeService.getStrokesByThoughtId(thoughtId);
   }
@@ -43,7 +43,7 @@ export class StrokeController {
   @UseGuards(JwtAuthGuard)
   async updateStroke(
     @Param("id") id: string,
-    @Body() updateData: { strokeData: string }
+    @Body() updateData: { strokeData: string },
   ): Promise<Stroke> {
     return this.strokeService.updateStroke(id, updateData.strokeData);
   }
@@ -54,4 +54,4 @@ export class StrokeController {
     await this.strokeService.deleteStroke(id);
     return { success: true };
   }
-} 
+}

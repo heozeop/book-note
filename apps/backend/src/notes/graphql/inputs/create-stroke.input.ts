@@ -12,4 +12,4 @@ export class CreateStrokeInput {
   @IsString()
   @IsNotEmpty()
   strokeData: string; // JSON stringified stroke data
-} 
+}

@@ -1,12 +1,10 @@
 import { BadRequestException, UseGuards } from "@nestjs/common";
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentUser } from "../decorators/current-user.decorator";
-import {
-  ChangePasswordInput,
-  UpdateProfileInput,
-  UserType,
-} from "../dtos/user.graphql";
 import { User } from "../entities/user.entity";
+import { ChangePasswordInput } from "../graphql/inputs/change-password.input";
+import { UpdateProfileInput } from "../graphql/inputs/update-profile.input";
+import { UserType } from "../graphql/types/user.type";
 import { JwtAuthGuard } from "../guards/jwt-auth.guard";
 import { AuthService } from "../services/auth.service";
 import { PasswordService } from "../services/password.service";

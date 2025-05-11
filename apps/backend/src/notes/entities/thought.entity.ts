@@ -21,7 +21,9 @@ export class Thought {
   @ManyToOne(() => Thought, { nullable: true })
   parentThought?: Thought;
 
-  @OneToMany(() => Thought, (thought) => thought.parentThought, { eager: false })
+  @OneToMany(() => Thought, (thought) => thought.parentThought, {
+    eager: false,
+  })
   childThoughts = new Collection<Thought>(this);
 
   @Property({ type: "text", nullable: true })
@@ -34,7 +36,7 @@ export class Thought {
   depth: number = 0; // 0 = root, 1-3 for nested thoughts
 
   @Property()
-  inputType: string = 'TEXT'; // TEXT or STROKE
+  inputType: string = "TEXT"; // TEXT or STROKE
 
   @OneToMany(() => Stroke, (stroke) => stroke.thought, { eager: false })
   strokes = new Collection<Stroke>(this);
@@ -44,4 +46,4 @@ export class Thought {
 
   @Property({ onUpdate: () => new Date() })
   updatedAt: Date = new Date();
-} 
+}

@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
 import { ThoughtType } from "./thought.type";
 
-@ObjectType('Stroke')
+@ObjectType("Stroke")
 export class StrokeType {
   @Field(() => ID)
   id: string;
@@ -20,4 +20,4 @@ export class StrokeType {
 
   @Field()
   updatedAt: Date;
-} 
+}

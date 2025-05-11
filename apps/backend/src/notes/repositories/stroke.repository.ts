@@ -29,4 +29,4 @@ export class StrokeRepository extends BaseRepository<Stroke> {
   async deleteByThoughtId(thoughtId: string): Promise<void> {
     await this.nativeDelete({ thought: thoughtId });
   }
-} 
+}

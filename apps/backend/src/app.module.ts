@@ -6,7 +6,7 @@ import { GraphQLModule } from "@nestjs/graphql";
 import { join } from "path";
 import { AuthModule } from "./auth/auth.module";
 import { BooksModule } from "./books/books.module";
-import { NotesModule } from './notes/notes.module';
+import { NotesModule } from "./notes/notes.module";
 
 // 각 기능별 모듈 임포트
 // 실제 모듈을 구현할 때 주석 해제

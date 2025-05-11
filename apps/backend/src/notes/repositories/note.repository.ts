@@ -37,4 +37,4 @@ export class NoteRepository extends BaseRepository<Note> {
   async deleteNote(id: string): Promise<void> {
     await this.nativeDelete({ id });
   }
-} 
+}

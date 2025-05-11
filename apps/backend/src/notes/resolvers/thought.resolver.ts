@@ -1,5 +1,12 @@
 import { UseGuards } from "@nestjs/common";
-import { Args, Mutation, Parent, Query, ResolveField, Resolver } from "@nestjs/graphql";
+import {
+  Args,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from "@nestjs/graphql";
 import { GqlAuthGuard } from "../../auth/guards/gql-auth.guard";
 import { CreateThoughtDto } from "../dtos/create-thought.dto";
 import { Thought } from "../entities/thought.entity";
@@ -12,7 +19,7 @@ import { ThoughtService } from "../services/thought.service";
 export class ThoughtResolver {
   constructor(
     private readonly thoughtService: ThoughtService,
-    private readonly strokeService: StrokeService
+    private readonly strokeService: StrokeService,
   ) {}
 
   @Query(() => ThoughtType)
@@ -26,20 +33,22 @@ export class ThoughtResolver {
   @UseGuards(GqlAuthGuard)
   async thoughtsByNote(@Args("noteId") noteId: string): Promise<ThoughtType[]> {
     const thoughts = await this.thoughtService.getThoughtsByNoteId(noteId);
-    return thoughts.map(thought => this.mapThoughtToType(thought));
+    return thoughts.map((thought) => this.mapThoughtToType(thought));
   }
 
   @Query(() => [ThoughtType])
   @UseGuards(GqlAuthGuard)
-  async childThoughts(@Args("parentId") parentId: string): Promise<ThoughtType[]> {
+  async childThoughts(
+    @Args("parentId") parentId: string,
+  ): Promise<ThoughtType[]> {
     const thoughts = await this.thoughtService.getChildThoughts(parentId);
-    return thoughts.map(thought => this.mapThoughtToType(thought));
+    return thoughts.map((thought) => this.mapThoughtToType(thought));
   }
 
   @Mutation(() => ThoughtType)
   @UseGuards(GqlAuthGuard)
   async createThought(
-    @Args("thoughtInput") thoughtInput: CreateThoughtDto
+    @Args("thoughtInput") thoughtInput: CreateThoughtDto,
   ): Promise<ThoughtType> {
     const thought = await this.thoughtService.createThought(thoughtInput);
     return this.mapThoughtToType(thought);
@@ -51,13 +60,13 @@ export class ThoughtResolver {
     @Args("id") id: string,
     @Args("text", { nullable: true }) text?: string,
     @Args("orderIndex", { nullable: true }) orderIndex?: number,
-    @Args("strokeData", { nullable: true }) strokeData?: string
+    @Args("strokeData", { nullable: true }) strokeData?: string,
   ): Promise<ThoughtType> {
     const updateData: any = {};
     if (text !== undefined) updateData.text = text;
     if (orderIndex !== undefined) updateData.orderIndex = orderIndex;
     if (strokeData !== undefined) updateData.strokeData = strokeData;
-    
+
     const thought = await this.thoughtService.updateThought(id, updateData);
     return this.mapThoughtToType(thought);
   }
@@ -72,13 +81,13 @@ export class ThoughtResolver {
   @ResolveField(() => [StrokeType])
   async strokes(@Parent() thought: ThoughtType): Promise<StrokeType[]> {
     const strokes = await this.strokeService.getStrokesByThoughtId(thought.id);
-    return strokes.map(stroke => ({
+    return strokes.map((stroke) => ({
       id: stroke.id,
       strokeData: stroke.strokeData,
       sourceType: stroke.sourceType,
       createdAt: stroke.createdAt,
       updatedAt: stroke.updatedAt,
-      thought: thought
+      thought: thought,
     }));
   }
 
@@ -92,9 +101,11 @@ export class ThoughtResolver {
       createdAt: thought.createdAt,
       updatedAt: thought.updatedAt,
       note: { id: thought.note.id } as any, // Will be resolved by NoteResolver
-      parentThought: thought.parentThought ? { id: thought.parentThought.id } as any : undefined,
+      parentThought: thought.parentThought
+        ? ({ id: thought.parentThought.id } as any)
+        : undefined,
       childThoughts: undefined, // Will be fetched by the resolver if needed
-      strokes: undefined // Will be fetched by the resolver if needed
+      strokes: undefined, // Will be fetched by the resolver if needed
     };
   }
-} 
+}

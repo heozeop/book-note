@@ -1,6 +1,6 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
-import { v4 } from 'uuid';
-import { Thought } from './thought.entity';
+import { Entity, ManyToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { v4 } from "uuid";
+import { Thought } from "./thought.entity";
 
 @Entity()
 export class Stroke {
@@ -14,11 +14,11 @@ export class Stroke {
   strokeData: string; // JSON stringified stroke data
 
   @Property()
-  sourceType: string = 'MOBILE'; // Type of input source: 'MOBILE' or 'WEB'
+  sourceType: string = "MOBILE"; // Type of input source: 'MOBILE' or 'WEB'
 
   @Property()
   createdAt: Date = new Date();
 
   @Property({ onUpdate: () => new Date() })
   updatedAt: Date = new Date();
-} 
+}

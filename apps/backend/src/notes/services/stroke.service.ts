@@ -8,7 +8,7 @@ import { ThoughtRepository } from "../repositories/thought.repository";
 export class StrokeService {
   constructor(
     private readonly strokeRepository: StrokeRepository,
-    private readonly thoughtRepository: ThoughtRepository
+    private readonly thoughtRepository: ThoughtRepository,
   ) {}
 
   /**
@@ -27,7 +27,7 @@ export class StrokeService {
     const stroke = new Stroke();
     stroke.thought = thought;
     stroke.strokeData = strokeData;
-    stroke.sourceType = 'MOBILE';
+    stroke.sourceType = "MOBILE";
 
     // Save to database
     await this.strokeRepository.persistAndFlush(stroke);
@@ -83,4 +83,4 @@ export class StrokeService {
 
     await this.strokeRepository.nativeDelete({ id });
   }
-} 
+}

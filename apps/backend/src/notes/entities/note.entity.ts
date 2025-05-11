@@ -1,6 +1,13 @@
 import { User } from "@/auth/entities/user.entity";
 import { Book } from "@/books/entities/book.entity";
-import { Collection, Entity, ManyToOne, OneToMany, PrimaryKey, Property } from "@mikro-orm/core";
+import {
+  Collection,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryKey,
+  Property,
+} from "@mikro-orm/core";
 import { v4 } from "uuid";
 import { Thought } from "./thought.entity";
 

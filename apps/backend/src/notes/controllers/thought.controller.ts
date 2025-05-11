@@ -1,12 +1,12 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { CreateThoughtDto } from "../dtos/create-thought.dto";
@@ -19,7 +19,9 @@ export class ThoughtController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  async createThought(@Body() createThoughtDto: CreateThoughtDto): Promise<Thought> {
+  async createThought(
+    @Body() createThoughtDto: CreateThoughtDto,
+  ): Promise<Thought> {
     return this.thoughtService.createThought(createThoughtDto);
   }
 
@@ -37,7 +39,9 @@ export class ThoughtController {
 
   @Get("parent/:parentId")
   @UseGuards(JwtAuthGuard)
-  async getChildThoughts(@Param("parentId") parentId: string): Promise<Thought[]> {
+  async getChildThoughts(
+    @Param("parentId") parentId: string,
+  ): Promise<Thought[]> {
     return this.thoughtService.getChildThoughts(parentId);
   }
 
@@ -45,11 +49,12 @@ export class ThoughtController {
   @UseGuards(JwtAuthGuard)
   async updateThought(
     @Param("id") id: string,
-    @Body() updateData: Partial<{
+    @Body()
+    updateData: Partial<{
       text: string;
       orderIndex: number;
       strokeData: string;
-    }>
+    }>,
   ): Promise<Thought> {
     return this.thoughtService.updateThought(id, updateData);
   }
@@ -60,4 +65,4 @@ export class ThoughtController {
     await this.thoughtService.deleteThought(id);
     return { success: true };
   }
-} 
+}

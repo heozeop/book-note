@@ -21,14 +21,14 @@ export class BookResolver {
     @Args("status", { nullable: true }) status?: BookStatus,
   ): Promise<BookType[]> {
     let books: Book[];
-    
+
     if (status) {
       books = await this.bookService.findBooksByStatus(status, user.id);
     } else {
       books = await this.bookService.findAllBooks(user.id);
     }
-    
-    return books.map(book => this.mapBookToType(book));
+
+    return books.map((book) => this.mapBookToType(book));
   }
 
   @Query(() => BookType, { name: "book" })
@@ -55,7 +55,11 @@ export class BookResolver {
     @Args("input") updateBookInput: UpdateBookInput,
     @CurrentUser() user: User,
   ): Promise<BookType> {
-    const book = await this.bookService.updateBook(id, updateBookInput, user.id);
+    const book = await this.bookService.updateBook(
+      id,
+      updateBookInput,
+      user.id,
+    );
     return this.mapBookToType(book);
   }
 
@@ -76,7 +80,7 @@ export class BookResolver {
     const book = await this.bookService.updateBookStatus(id, status, user.id);
     return this.mapBookToType(book);
   }
-  
+
   /**
    * Maps a Book entity to a BookType for GraphQL
    */
@@ -99,7 +103,7 @@ export class BookResolver {
       createdAt: book.createdAt,
       updatedAt: book.updatedAt,
       owner: { id: book.owner.id } as any, // Will be resolved by UserResolver if needed
-      notes: book.notes?.getItems().map(note => ({ id: note.id })) as any // Will be resolved by NoteResolver if needed
+      notes: book.notes?.getItems().map((note) => ({ id: note.id })) as any, // Will be resolved by NoteResolver if needed
     };
   }
 }

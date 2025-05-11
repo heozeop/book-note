@@ -5,4 +5,4 @@ import { registerEnumType } from "@nestjs/graphql";
 registerEnumType(BookStatus, {
   name: "BookStatus",
   description: "Status of a book in the reading journey",
-}); 
+});

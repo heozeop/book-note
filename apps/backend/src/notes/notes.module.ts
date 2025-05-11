@@ -23,17 +23,17 @@ import { ThoughtService } from "./services/thought.service";
   providers: [
     // Repositories
     NoteRepository,
-    ThoughtRepository, 
+    ThoughtRepository,
     StrokeRepository,
-    
+
     // Services
     ThoughtService,
     StrokeService,
-    
+
     // Resolvers
     ThoughtResolver,
     StrokeResolver,
   ],
   exports: [ThoughtService, StrokeService],
 })
-export class NotesModule {} 
+export class NotesModule {}

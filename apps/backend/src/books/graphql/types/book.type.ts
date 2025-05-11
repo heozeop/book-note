@@ -1,9 +1,9 @@
-import { UserType } from "@/auth/dtos/user.graphql";
+import { UserType } from "@/auth/graphql/types";
 import { BookStatus } from "@/books/entities/book.entity";
+import { NoteType } from "@/notes/graphql/types/note.type";
 import { Field, ID, ObjectType } from "@nestjs/graphql";
-import { NoteType } from "../../../notes/graphql/types/note.type";
 
-@ObjectType('Book')
+@ObjectType("Book")
 export class BookType {
   @Field(() => ID)
   id: string;
@@ -58,4 +58,4 @@ export class BookType {
 
   @Field()
   updatedAt: Date;
-} 
+}

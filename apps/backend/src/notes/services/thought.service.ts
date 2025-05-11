@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { CreateThoughtDto, InputType } from "../dtos/create-thought.dto";
 import { Stroke } from "../entities/stroke.entity";
 import { Thought } from "../entities/thought.entity";
@@ -11,14 +15,15 @@ export class ThoughtService {
   constructor(
     private readonly thoughtRepository: ThoughtRepository,
     private readonly noteRepository: NoteRepository,
-    private readonly strokeRepository: StrokeRepository
+    private readonly strokeRepository: StrokeRepository,
   ) {}
 
   /**
    * Create a new thought with either text or stroke data
    */
   async createThought(createThoughtDto: CreateThoughtDto): Promise<Thought> {
-    const { noteId, parentThoughtId, text, strokeData, inputType } = createThoughtDto;
+    const { noteId, parentThoughtId, text, strokeData, inputType } =
+      createThoughtDto;
 
     // Find the note
     const note = await this.noteRepository.findById(noteId);
@@ -31,7 +36,9 @@ export class ThoughtService {
     if (parentThoughtId) {
       parentThought = await this.thoughtRepository.findById(parentThoughtId);
       if (!parentThought) {
-        throw new NotFoundException(`Parent thought with ID ${parentThoughtId} not found`);
+        throw new NotFoundException(
+          `Parent thought with ID ${parentThoughtId} not found`,
+        );
       }
     }
 
@@ -48,7 +55,7 @@ export class ThoughtService {
     thought.orderIndex = createThoughtDto.orderIndex;
     thought.depth = createThoughtDto.depth;
     thought.inputType = inputType;
-    
+
     // Set parent thought if specified
     if (parentThought) {
       thought.parentThought = parentThought;
@@ -69,7 +76,7 @@ export class ThoughtService {
       const stroke = new Stroke();
       stroke.thought = thought;
       stroke.strokeData = strokeData;
-      stroke.sourceType = 'MOBILE';
+      stroke.sourceType = "MOBILE";
       await this.strokeRepository.persistAndFlush(stroke);
     }
 
@@ -105,12 +112,12 @@ export class ThoughtService {
    * Update a thought
    */
   async updateThought(
-    id: string, 
+    id: string,
     updateData: Partial<{
       text: string;
       orderIndex: number;
       strokeData: string;
-    }>
+    }>,
   ): Promise<Thought> {
     const thought = await this.thoughtRepository.findById(id);
     if (!thought) {
@@ -121,7 +128,7 @@ export class ThoughtService {
     if (updateData.text !== undefined) {
       thought.text = updateData.text;
     }
-    
+
     if (updateData.orderIndex !== undefined) {
       thought.orderIndex = updateData.orderIndex;
     }
@@ -130,7 +137,7 @@ export class ThoughtService {
     if (updateData.strokeData && thought.inputType === InputType.STROKE) {
       // Find existing stroke or create new one
       let stroke = (await this.strokeRepository.findByThoughtId(id))[0];
-      
+
       if (stroke) {
         // Update existing stroke
         stroke.strokeData = updateData.strokeData;
@@ -140,7 +147,7 @@ export class ThoughtService {
         stroke = new Stroke();
         stroke.thought = thought;
         stroke.strokeData = updateData.strokeData;
-        stroke.sourceType = 'MOBILE';
+        stroke.sourceType = "MOBILE";
         await this.strokeRepository.persistAndFlush(stroke);
       }
     }
@@ -160,8 +167,8 @@ export class ThoughtService {
 
     // Delete associated strokes first
     await this.strokeRepository.deleteByThoughtId(id);
-    
+
     // Delete thought and all its children
     await this.thoughtRepository.deleteThoughtWithChildren(id);
   }
-} 
+}
