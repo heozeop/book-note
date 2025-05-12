@@ -1,43 +1,33 @@
-import {
-  IsBoolean,
-  IsDateString,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-} from "class-validator";
-import { BookStatus } from "../entities/reading-status.entity";
+import { Type } from 'class-transformer';
+import { IsBoolean, IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { BookStatus } from '../modules/book/entities/reading-status.entity';
 
 export class CreateUserBookDto {
   @IsNotEmpty()
-  @IsUUID()
+  @IsString()
   bookId: string;
 
   @IsOptional()
+  @IsEnum(BookStatus)
+  status?: BookStatus;
+
+  @IsOptional()
   @IsBoolean()
-  isPrivate?: boolean = true;
+  isPrivate?: boolean;
 
   @IsOptional()
   @IsNumber()
-  @Min(1.0)
-  @Max(5.0)
+  @Min(1)
   rating?: number;
 
   @IsOptional()
-  @IsDateString()
+  @IsDate()
+  @Type(() => Date)
   boughtAt?: Date;
 
   @IsOptional()
   @IsString()
   userNotes?: string;
-
-  @IsOptional()
-  @IsEnum(BookStatus)
-  status?: BookStatus = BookStatus.WANT_TO_READ;
 
   @IsOptional()
   @IsNumber()
@@ -47,5 +37,5 @@ export class CreateUserBookDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  rereadCount?: number = 0;
+  rereadCount?: number;
 } 

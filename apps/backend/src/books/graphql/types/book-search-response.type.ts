@@ -1,56 +1,31 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { BookType } from "./book.type";
-
-@ObjectType()
-export class BookItemType {
-  @Field()
-  title: string;
-
-  @Field({ nullable: true })
-  subTitle?: string;
-
-  @Field()
-  author: string;
-
-  @Field()
-  publisher: string;
-
-  @Field({ nullable: true })
-  publishedDate?: Date;
-
-  @Field()
-  isbn: string;
-
-  @Field()
-  description: string;
-
-  @Field()
-  coverUrl: string;
-
-  @Field(() => Int, { nullable: true })
-  price?: number;
-
-  @Field(() => Int, { nullable: true })
-  discount?: number;
-
-  @Field({ nullable: true })
-  externalId?: string;
-}
+import { BookSearchResponseDto } from '../../dtos/book-search.response.dto';
+import { BookSearchItemType } from './book-search-item.type';
 
 @ObjectType()
 export class BookSearchResponseType {
   @Field(() => Int)
   total: number;
 
-  @Field(() => Int)
-  start: number;
-
-  @Field(() => Int)
-  display: number;
+  @Field(() => Int, { nullable: true })
+  start?: number;
 
   @Field(() => Int, { nullable: true })
-  page?: number;
+  display?: number;
 
-  @Field(() => [BookType])
-  items: BookType[];
+  @Field(() => Int)
+  page: number;
+
+  @Field(() => [BookSearchItemType])
+  items: BookSearchItemType[];
+
+  static fromDto(dto: BookSearchResponseDto): BookSearchResponseType {
+    const type = new BookSearchResponseType();
+    type.total = dto.total;
+    type.start = dto.start;
+    type.display = dto.display;
+    type.page = dto.page;
+    type.items = dto.items.map(item => BookSearchItemType.fromDto(item));
+    return type;
+  }
 } 

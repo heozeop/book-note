@@ -13,28 +13,28 @@ import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { User } from "../../auth/entities/user.entity";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { CreateUserBookDto } from "../dtos/create-user-book.dto";
-import { BookStatus } from "../entities/reading-status.entity";
-import { UserBook } from "../entities/user-book.entity";
-import { UserBookService } from "../services/user-book.service";
+import { CreateUserBookDto, UserBookResponseDto } from "../dtos";
+import { BookStatus } from "../modules/book/entities/reading-status.entity";
+import { UserBookFacadeService } from "../services/user-book-facade.service";
 
 @ApiTags("user-books")
 @Controller("user-books")
 @UseGuards(JwtAuthGuard)
 export class UserBookController {
-  constructor(private readonly userBookService: UserBookService) {}
+  constructor(private readonly userBookFacadeService: UserBookFacadeService) {}
 
   @ApiOperation({ summary: "사용자 책 등록" })
   @ApiResponse({
     status: 201,
     description: "사용자 책이 성공적으로 등록되었습니다.",
+    type: UserBookResponseDto,
   })
   @Post()
   async createUserBook(
     @Body() createUserBookDto: CreateUserBookDto,
     @CurrentUser() user: User,
-  ): Promise<UserBook> {
-    return this.userBookService.createUserBook(createUserBookDto, user);
+  ): Promise<UserBookResponseDto> {
+    return this.userBookFacadeService.createUserBook(createUserBookDto, user);
   }
 
   @ApiOperation({ summary: "사용자의 모든 책 조회" })
@@ -47,16 +47,17 @@ export class UserBookController {
   @ApiResponse({
     status: 200,
     description: "사용자 책 목록이 성공적으로 조회되었습니다.",
+    type: [UserBookResponseDto],
   })
   @Get()
   async getUserBooks(
     @CurrentUser() user: User,
     @Query("status") status?: BookStatus,
-  ): Promise<UserBook[]> {
+  ): Promise<UserBookResponseDto[]> {
     if (status) {
-      return this.userBookService.findUserBooksByStatus(status, user.id);
+      return this.userBookFacadeService.findUserBooksByStatus(status, user.id);
     }
-    return this.userBookService.findAllUserBooks(user.id);
+    return this.userBookFacadeService.findAllUserBooks(user.id);
   }
 
   @ApiOperation({ summary: "특정 사용자 책 조회" })
@@ -64,13 +65,14 @@ export class UserBookController {
   @ApiResponse({
     status: 200,
     description: "사용자 책이 성공적으로 조회되었습니다.",
+    type: UserBookResponseDto,
   })
   @Get(":id")
   async getUserBook(
     @Param("id") id: string,
     @CurrentUser() user: User,
-  ): Promise<UserBook> {
-    return this.userBookService.findUserBookById(id, user.id);
+  ): Promise<UserBookResponseDto> {
+    return this.userBookFacadeService.findUserBookById(id, user.id);
   }
 
   @ApiOperation({ summary: "사용자 책 상태 업데이트" })
@@ -79,14 +81,15 @@ export class UserBookController {
   @ApiResponse({
     status: 200,
     description: "사용자 책 상태가 성공적으로 업데이트되었습니다.",
+    type: UserBookResponseDto,
   })
   @Put(":id/status/:status")
   async updateUserBookStatus(
     @Param("id") id: string,
     @Param("status") status: BookStatus,
     @CurrentUser() user: User,
-  ): Promise<UserBook> {
-    return this.userBookService.updateUserBookStatus(id, status, user.id);
+  ): Promise<UserBookResponseDto> {
+    return this.userBookFacadeService.updateUserBookStatus(id, status, user.id);
   }
 
   @ApiOperation({ summary: "사용자 책 삭제" })
@@ -94,13 +97,22 @@ export class UserBookController {
   @ApiResponse({
     status: 200,
     description: "사용자 책이 성공적으로 삭제되었습니다.",
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          example: true
+        }
+      }
+    }
   })
   @Delete(":id")
   async deleteUserBook(
     @Param("id") id: string,
     @CurrentUser() user: User,
   ): Promise<{ success: boolean }> {
-    const result = await this.userBookService.deleteUserBook(id, user.id);
+    const result = await this.userBookFacadeService.deleteUserBook(id, user.id);
     return { success: result };
   }
 } 

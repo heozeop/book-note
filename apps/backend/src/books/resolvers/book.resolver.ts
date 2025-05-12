@@ -1,26 +1,18 @@
-import { Inject, UseGuards } from "@nestjs/common";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { UseGuards } from "@nestjs/common";
 import { Args, Int, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { User } from "../../auth/entities/user.entity";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { BookResponseDto } from "../dtos/book.response.dto";
-import { UserBookResponseDto } from "../dtos/user-book.response.dto";
-import { BookStatus } from "../entities/reading-status.entity";
-import { CreateBookInput } from "../graphql/inputs/create-book.input";
-import { UpdateBookInput } from "../graphql/inputs/update-book.input";
-import { BookResponseType } from "../graphql/types/book-response.type";
-import { BookSearchResponseType } from "../graphql/types/book-search-response.type";
-import { UserBookResponseType } from "../graphql/types/user-book-response.type";
-import { BookSearchResponse, IBookSearchService } from "../modules/book-search/interfaces/book-search.interface";
-import { BookService } from "../services/book.service";
+import { CreateBookInput, UpdateBookInput } from "../graphql/inputs";
+import { BookResponseType, BookSearchResponseType, UserBookResponseType } from "../graphql/types";
+import { BookStatus } from "../modules/book/entities/reading-status.entity";
+import { BookFacadeService } from "../services/book-facade.service";
 
 @Resolver(() => UserBookResponseType)
 @UseGuards(JwtAuthGuard)
 export class BookResolver {
   constructor(
-    private readonly bookService: BookService,
-    @Inject('BOOK_SEARCH_SERVICE')
-    private readonly bookSearchService: IBookSearchService
+    private readonly bookFacadeService: BookFacadeService
   ) {}
 
   @Query(() => [UserBookResponseType])
@@ -29,19 +21,16 @@ export class BookResolver {
     @Args('status', { nullable: true }) status?: BookStatus,
     @Args('tag', { nullable: true }) tag?: string
   ) {
-    const books = await this.bookService.findAllBooks(user, status);
-    
-    // Get tags for each book
-    const result: UserBookResponseType[] = [];
-    for (const userBook of books) {
-      const tags = await this.bookService.getTagsForUserBook(userBook.id);
-      const dto = UserBookResponseDto.fromEntity(userBook, tags);
-      if (dto) {
-        result.push(UserBookResponseType.fromDto(dto));
-      }
+    const userBooks = await this.bookFacadeService.findAllBooks(user, status);
+    // If tag is provided, filter results by tag
+    if (tag) {
+      const booksWithTag = userBooks.filter(userBook => 
+        userBook.tags.some(t => t.name.toLowerCase() === tag.toLowerCase())
+      );
+      return booksWithTag.map(dto => UserBookResponseType.fromDto(dto));
     }
     
-    return result;
+    return userBooks.map(dto => UserBookResponseType.fromDto(dto));
   }
 
   @Query(() => UserBookResponseType, { nullable: true })
@@ -49,24 +38,16 @@ export class BookResolver {
     @Args("id") id: string,
     @CurrentUser() user: User
   ) {
-    const { userBook, tags } = await this.bookService.findBookByIdWithTags(id, user);
-    const dto = UserBookResponseDto.fromEntity(userBook, tags);
-    if (!dto) return null;
-    return UserBookResponseType.fromDto(dto);
+    const userBook = await this.bookFacadeService.findBookById(id, user);
+    return UserBookResponseType.fromDto(userBook);
   }
 
   @Query(() => [BookResponseType])
   async searchLocalBooks(
-    @Args("query") query: string,
-    @CurrentUser() user: User
+    @Args("query") query: string
   ) {
-    const books = await this.bookService.searchBooksByTitleQuery(query);
-    
-    // Return BookResponseType for search results as they may not be in the user's library
-    return books
-      .map(book => BookResponseDto.fromEntity(book))
-      .filter(dto => dto !== null)
-      .map(dto => BookResponseType.fromDto(dto));
+    const books = await this.bookFacadeService.searchBooksByTitleQuery(query);
+    return books.map(dto => BookResponseType.fromDto(dto));
   }
 
   @Query(() => BookSearchResponseType)
@@ -77,9 +58,10 @@ export class BookResolver {
     @Args("size", { type: () => Int, nullable: true }) size?: number,
     @Args("sort", { nullable: true }) sort?: string,
     @Args("order", { nullable: true }) order?: 'asc' | 'desc',
-  ): Promise<BookSearchResponse> {
+  ) {
+    // ISBN search takes priority
     if (isbn) {
-      const result = await this.bookService.searchBookByIsbn(isbn);
+      const result = await this.bookFacadeService.searchBookByIsbn(isbn);
       return {
         total: result ? 1 : 0,
         page: 1,
@@ -89,6 +71,7 @@ export class BookResolver {
       };
     }
 
+    // Return empty results if no query
     if (!query) {
       return {
         total: 0,
@@ -102,46 +85,37 @@ export class BookResolver {
     const display = size || 10;
     const start = page ? (page - 1) * display + 1 : 1;
     
-    // Sort options mapping for the API
-    let sortParam = sort || 'sim';
-    if (sort === 'publishedDate') {
-      sortParam = 'date';
-    }
+    // Sort options
+    const sortOption = sort || 'sim';  // Default to relevance
 
-    return this.bookService.searchBooksByKeyword(query, {
+    return this.bookFacadeService.searchBooksByKeyword(query, {
       display,
       start,
-      sort: sortParam,
+      sort: sortOption,
       order
     });
   }
 
-  @Mutation(() => UserBookResponseType, { nullable: true })
+  @Mutation(() => UserBookResponseType)
   async createBook(
     @Args('input') input: CreateBookInput,
     @CurrentUser() user: User
   ) {
-    const userBook = await this.bookService.createBook(input, user);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    const dto = UserBookResponseDto.fromEntity(userBook, tags);
-    if (!dto) return null;
-    return UserBookResponseType.fromDto(dto);
+    const userBook = await this.bookFacadeService.createBook(input, user);
+    return UserBookResponseType.fromDto(userBook);
   }
 
-  @Mutation(() => UserBookResponseType, { nullable: true })
+  @Mutation(() => UserBookResponseType)
   async updateBook(
     @Args("id") id: string, 
     @Args("input") input: UpdateBookInput,
     @CurrentUser() user: User
   ) {
-    const userBook = await this.bookService.updateBook(id, input, user);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    const dto = UserBookResponseDto.fromEntity(userBook, tags);
-    if (!dto) return null;
-    return UserBookResponseType.fromDto(dto);
+    const userBook = await this.bookFacadeService.updateBook(id, input, user);
+    return UserBookResponseType.fromDto(userBook);
   }
 
-  @Mutation(() => UserBookResponseType, { nullable: true })
+  @Mutation(() => UserBookResponseType)
   async updateBookStatus(
     @Args("id") id: string,
     @Args("status") status: BookStatus,
@@ -152,11 +126,8 @@ export class BookResolver {
       throw new Error(`Invalid status: ${status}`);
     }
     
-    const userBook = await this.bookService.updateBookStatus(id, user, status);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    const dto = UserBookResponseDto.fromEntity(userBook, tags);
-    if (!dto) return null;
-    return UserBookResponseType.fromDto(dto);
+    const userBook = await this.bookFacadeService.updateBookStatus(id, status, user);
+    return UserBookResponseType.fromDto(userBook);
   }
 
   @Mutation(() => Boolean)
@@ -164,6 +135,6 @@ export class BookResolver {
     @Args("id") id: string,
     @CurrentUser() user: User
   ) {
-    return this.bookService.deleteBook(id, user);
+    return this.bookFacadeService.deleteBook(id, user);
   }
 }

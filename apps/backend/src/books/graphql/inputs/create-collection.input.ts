@@ -1,20 +1,13 @@
-import { Field, InputType } from "@nestjs/graphql";
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CreateCollectionInput {
   @Field()
-  @IsNotEmpty()
-  @IsString()
   name: string;
 
   @Field({ nullable: true })
-  @IsOptional()
-  @IsString()
   description?: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsString()
-  coverUrl?: string;
+  @Field(() => [String], { nullable: true })
+  bookIds?: string[];
 } 

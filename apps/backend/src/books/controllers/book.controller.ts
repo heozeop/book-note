@@ -23,32 +23,29 @@ import { BookResponseDto } from "../dtos/book.response.dto";
 import { CreateBookDto } from "../dtos/create-book.dto";
 import { UpdateBookDto } from "../dtos/update-book.dto";
 import { UserBookResponseDto } from "../dtos/user-book.response.dto";
-import { BookStatus } from "../entities/reading-status.entity";
-import { BookService } from "../services/book.service";
-import { TagService } from "../services/tag.service";
+import { BookStatus } from "../modules/book/entities/reading-status.entity";
+import { BookFacadeService } from "../services/book-facade.service";
 
 @ApiTags("books")
 @Controller("books")
 @UseGuards(JwtAuthGuard)
 export class BookController {
   constructor(
-    private readonly bookService: BookService,
-    private readonly tagService: TagService,
+    private readonly bookFacadeService: BookFacadeService,
   ) {}
 
   @ApiOperation({ summary: "새 책 등록" })
   @ApiResponse({
     status: 201,
     description: "책이 성공적으로 등록되었습니다.",
+    type: UserBookResponseDto,
   })
   @Post()
   async createBook(
     @Body() createBookDto: CreateBookDto,
     @CurrentUser() user: User,
-  ) {
-    const userBook = await this.bookService.createBook(createBookDto, user);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    return UserBookResponseDto.fromEntity(userBook, tags);
+  ): Promise<UserBookResponseDto> {
+    return this.bookFacadeService.createBook(createBookDto, user);
   }
 
   @ApiOperation({ summary: "ISBN으로 책 등록" })
@@ -56,15 +53,14 @@ export class BookController {
   @ApiResponse({
     status: 201,
     description: "책이 성공적으로 등록되었습니다.",
+    type: UserBookResponseDto,
   })
   @Post("isbn/:isbn")
   async createBookFromIsbn(
     @Param("isbn") isbn: string,
     @CurrentUser() user: User,
-  ) {
-    const userBook = await this.bookService.createBookFromIsbn(isbn, user);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    return UserBookResponseDto.fromEntity(userBook, tags);
+  ): Promise<UserBookResponseDto> {
+    return this.bookFacadeService.createBookFromIsbn(isbn, user);
   }
 
   @ApiOperation({ summary: "책 검색 (키워드 또는 ISBN)" })
@@ -89,7 +85,7 @@ export class BookController {
   ) {
     // ISBN 검색이 우선
     if (isbn) {
-      const result = await this.bookService.searchBookByIsbn(isbn);
+      const result = await this.bookFacadeService.searchBookByIsbn(isbn);
       // 동일한 응답 형식 유지
       return {
         total: result ? 1 : 0,
@@ -113,7 +109,7 @@ export class BookController {
     // 정렬 옵션 처리
     const sortOption = sort || 'sim';  // 기본값은 관련성
 
-    return this.bookService.searchBooksByKeyword(query, {
+    return this.bookFacadeService.searchBooksByKeyword(query, {
       display,
       start,
       sort: sortOption,
@@ -126,17 +122,13 @@ export class BookController {
   @ApiResponse({
     status: 200,
     description: "검색 결과가 성공적으로 반환되었습니다.",
+    type: [BookResponseDto],
   })
   @Get("search/local")
   async searchLocalBooks(
     @Query("query") query: string,
-    @CurrentUser() user: User,
-  ) {
-    const books = await this.bookService.searchBooksByTitleQuery(query);
-    
-    // Convert to BookResponseDto for now until we implement proper UserBookResponseDto
-    // handling for book search. This API might need further adjustment.
-    return books.map(book => BookResponseDto.fromEntity(book));
+  ): Promise<BookResponseDto[]> {
+    return this.bookFacadeService.searchBooksByTitleQuery(query);
   }
 
   @ApiOperation({ summary: "완독한 책 조회" })
@@ -145,13 +137,14 @@ export class BookController {
   @ApiResponse({
     status: 200,
     description: "완독한 책 목록이 성공적으로 반환되었습니다.",
+    type: [UserBookResponseDto],
   })
   @Get("completed")
   async getCompletedBooks(
     @Query("startDate") startDate: string,
     @Query("endDate") endDate: string,
     @CurrentUser() user: User,
-  ) {
+  ): Promise<UserBookResponseDto[]> {
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -159,135 +152,101 @@ export class BookController {
       // 종료일은 해당 일의 마지막 시간으로 설정 (23:59:59.999)
       end.setHours(23, 59, 59, 999);
       
-      const books = await this.bookService.getCompletedBooks(user, start, end);
-      
-      // Get tags for each book
-      const result: UserBookResponseDto[] = [];
-      for (const userBook of books) {
-        const tags = await this.bookService.getTagsForUserBook(userBook.id);
-        const dto = UserBookResponseDto.fromEntity(userBook, tags);
-        if (dto) {
-          result.push(dto);
-        }
-      }
-      
-      return result;
+      return this.bookFacadeService.getCompletedBooks(user, start, end);
     } catch (error) {
       throw new Error(`Invalid date format: ${error.message}`);
     }
   }
 
-  /**
-   * 특정 ID로 책을 조회합니다.
-   */
-  @Get(":id")
   @ApiOperation({ summary: "책 ID로 책 조회" })
   @ApiParam({ name: "id", description: "책 ID" })
-  @ApiResponse({ status: 200, description: "책 정보 반환" })
+  @ApiResponse({ 
+    status: 200, 
+    description: "책 정보 반환",
+    type: UserBookResponseDto,
+  })
+  @Get(":id")
   async getBookById(
     @Param("id") id: string,
     @CurrentUser() user: User,
-  ) {
-    const { userBook, tags } = await this.bookService.findBookByIdWithTags(id, user);
-    return UserBookResponseDto.fromEntity(userBook, tags);
+  ): Promise<UserBookResponseDto> {
+    return this.bookFacadeService.findBookById(id, user);
   }
 
-  /**
-   * 책을 수정합니다.
-   */
-  @Patch(":id")
   @ApiOperation({ summary: "책 정보 수정" })
   @ApiParam({ name: "id", description: "책 ID" })
-  @ApiResponse({ status: 200, description: "수정된 책 정보 반환" })
+  @ApiResponse({ 
+    status: 200, 
+    description: "수정된 책 정보 반환",
+    type: UserBookResponseDto,
+  })
+  @Patch(":id")
   async updateBook(
     @Param("id") id: string,
     @Body() updateBookDto: UpdateBookDto,
     @CurrentUser() user: User,
-  ) {
-    const userBook = await this.bookService.updateBook(id, updateBookDto, user);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    return UserBookResponseDto.fromEntity(userBook, tags);
+  ): Promise<UserBookResponseDto> {
+    return this.bookFacadeService.updateBook(id, updateBookDto, user);
   }
 
-  /**
-   * 책 상태(읽는 중, 완료 등)를 업데이트합니다.
-   */
-  @Patch(":id/status")
   @ApiOperation({ summary: "책 읽기 상태 업데이트" })
   @ApiParam({ name: "id", description: "책 ID" })
   @ApiQuery({ name: "status", enum: BookStatus, description: "책 상태 (WANT_TO_READ, READING, COMPLETED)" })
-  @ApiResponse({ status: 200, description: "업데이트된 책 정보 반환" })
+  @ApiResponse({ 
+    status: 200, 
+    description: "업데이트된 책 정보 반환",
+    type: UserBookResponseDto,
+  })
+  @Patch(":id/status")
   async updateBookStatus(
     @Param("id") id: string,
     @Query("status") status: BookStatus,
     @CurrentUser() user: User,
-  ) {
+  ): Promise<UserBookResponseDto> {
     // BookStatus enum에 포함된 값인지 유효성 검사
     if (!Object.values(BookStatus).includes(status)) {
       throw new Error(`Invalid status: ${status}`);
     }
     
-    const userBook = await this.bookService.updateBookStatus(id, user, status);
-    const tags = await this.bookService.getTagsForUserBook(userBook.id);
-    return UserBookResponseDto.fromEntity(userBook, tags);
+    return this.bookFacadeService.updateBookStatus(id, status, user);
   }
 
   @ApiOperation({ summary: "모든 책 조회" })
   @ApiResponse({
     status: 200,
     description: "책 목록이 성공적으로 조회되었습니다.",
+    type: [UserBookResponseDto],
   })
-  @ApiQuery({ name: "tag", description: "필터링할 태그", required: false })
+  @ApiQuery({ name: "status", description: "필터링할 상태", required: false, enum: BookStatus })
   @Get()
   async getAllBooks(
     @CurrentUser() user: User,
-    @Query("tag") tagName?: string
-  ) {
-    // If filtering by tag
-    if (tagName) {
-      // For tests, we need to handle createdBookId which is the book.id not the userBook.id
-      // In e2e tests we're looking for createdBookId which is the book's ID, not the userBook's ID
-      const userBooks = await this.tagService.findBooksByTag(tagName, user.id);
-      
-      // Get tags for each book
-      const result: UserBookResponseDto[] = [];
-      for (const userBook of userBooks) {
-        const tags = await this.bookService.getTagsForUserBook(userBook.id);
-        const dto = UserBookResponseDto.fromEntity(userBook, tags);
-        if (dto) {
-          // Optionally set additional properties for test compatibility
-          result.push(dto);
-        }
-      }
-      
-      return result;
-    }
-    
-    // Regular book listing
-    const books = await this.bookService.findAllBooks(user);
-    
-    // Get tags for each book
-    const result: UserBookResponseDto[] = [];
-    for (const userBook of books) {
-      const tags = await this.bookService.getTagsForUserBook(userBook.id);
-      const dto = UserBookResponseDto.fromEntity(userBook, tags);
-      if (dto) {
-        result.push(dto);
-      }
-    }
-    
-    return result;
+    @Query("status") status?: BookStatus,
+  ): Promise<UserBookResponseDto[]> {
+    return this.bookFacadeService.findAllBooks(user, status);
   }
 
   @ApiOperation({ summary: "책 삭제" })
   @ApiParam({ name: "id", description: "책 ID" })
-  @ApiResponse({ status: 200, description: "삭제 성공 여부" })
+  @ApiResponse({
+    status: 200,
+    description: "책이 성공적으로 삭제되었습니다.",
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          example: true
+        }
+      }
+    }
+  })
   @Delete(":id")
   async deleteBook(
     @Param("id") id: string,
     @CurrentUser() user: User,
-  ) {
-    await this.bookService.deleteBook(id, user);
-    return { success: true };
+  ): Promise<{ success: boolean }> {
+    const result = await this.bookFacadeService.deleteBook(id, user);
+    return { success: result };
   }
 }
